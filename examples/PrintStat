@@ -1,0 +1,9 @@
+#!/usr/local/bin/marsexec
+
+logon SYS SYSTEM;
+
+put - using "'    | Фамилия     |  Отдел     |  Рождение    | Зарплата |'/"
+	    "'    |-------------|------------|--------------|----------|'/"
+	    "(a12,' | ',a12,' | ',a12,' | ',a12,' | ',i6,' | ',a8,' | ',a8)"
+	select RawMailStat for HostFrom, HostTo, UserFrom, UserTo,
+		Size, Time, Date;

@@ -1,0 +1,49 @@
+#!/usr/local/bin/marsreport
+
+# Пример выдачи отчета через tbl+nroff.
+
+logon SYS SYSTEM
+
+query {
+	group  (select stat where site='sir'
+		for site, tbytes, ttim, date)
+	by site, date
+	for
+		site:   char(site,14),
+		b:      sum(tbytes),
+		t:      sum(ttim),
+			date
+}
+
+file "| sed 's/ *: */:/g' | tbl | nroff"
+format { site=L14, b=i10, t=i7 }
+sum { b, t }
+
+line {
+:{b}       :{t}    :{date}
+}
+
+report heading {
+.in 2
+.TS
+tab(:),box;
+l r r r2
+.
+Абонент:Байты:Секунды:Дата
+_
+}
+
+report footing {
+#:{b}       :{t}    :
+.TE
+}
+
+group site {
+{site}        :::
+}
+
+group footing {
+_
+:{b}       :{t}    :
+_
+}

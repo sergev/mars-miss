@@ -1,0 +1,208 @@
+                    /* ========================= *\
+                    ** ==       M.A.R.S.      == **
+                    ** == Доопределение языка == **
+                    \* ========================= */
+
+/*
+ * Настройка транслятора
+ */
+#if defined(MISS)
+#  if defined(R_11)
+#    ifdef GlobalMain
+#      pragma STARTER(NULL);
+#      pragma REGIME(SYS);
+#      pragma STACK_SIZE(300);
+#    endif GlobalMain
+#  elif defined(i_86)
+#    pragma ON(I286);
+#    pragma MODEL(COMPACT);
+#    define __LIBRARIES_FAR__
+#    ifdef GlobalMain
+#      pragma STACK_SIZE(6_000);
+#      include <PragmaItem>
+#      pragma  DATA(ITEM);
+       Regime  (SYS);
+#      undef Regime
+#      pragma DATA (DATA , DGROUP, DATA, MAIN, ALIGN=3);
+#      pragma STACK(STACK, DGROUP, DATA, MAIN, ALIGN=1);
+#      pragma CODE (CODE,       *, CODE, MAIN, ALIGN=3,READ);
+#    endif GlobalMain
+#  endif
+#elif THINK_C
+#  define macintosh
+#  define MC68000
+#endif
+
+#include <stddef.h>
+#include <setjmp.h>
+#  define recursive
+#  define mfar
+#  define CodeSegment(x)
+
+/*
+ * Настройка на машину
+ */
+#if defined(R_11)
+#  define ZCache
+#  define Rbitfield    1
+#  define MaxDigit    15                   /* max длина строки цифр   */
+#  define MaxExponent 74
+#  undef  recursive
+   typedef float      real;
+#elif defined(i_86)
+#  define ZCache
+#  define ReverseBytes
+#  define Rbitfield 1
+#  define BSFloat
+#  define MaxDigit    20                   /* max длина строки цифр   */
+#  define MaxExponent 308
+   typedef double     real;
+#elif defined(i386)
+#  define Rbitfield 1           /* битовые поля идут справа налево */
+#  define ReverseBytes          /* обратный порядок байтов (для сортировки) */
+#  define CdShort
+#  define BSFloat               /* инвертировать отриц. real (для сортировки) */
+#  define MaxDigit    20        /* max длина строки цифр   */
+#  define MaxExponent 308       /* max десятичная экспонента */
+   typedef double     real;
+#elif defined(vax)
+#  define Rbitfield 1           /* битовые поля идут справа налево */
+#  define ReverseBytes          /* обратный порядок байтов (для сортировки) */
+#  define CdShort
+#  define BSFloat               /* инвертировать отриц. real (для сортировки) */
+#  define MaxDigit    21        /* max длина строки цифр   */
+#  define MaxExponent 127       /* max десятичная экспонента */
+   typedef double     real;
+#elif defined(MC68000)
+#  define Rbitfield 0
+#  define CdShort
+#  define BSFloat
+#  define MaxDigit    20                   /* max длина строки цифр   */
+#  define MaxExponent 200
+#  if defined(MPW)
+     typedef double       real;
+#  else
+     typedef short double real;
+#  endif
+#else
+# error "Unknown Processor"
+#endif
+
+
+/*
+ * Настройка на систему
+ */
+#if defined(MISS)
+# include <Types>
+# include <SysConv>
+# include <SysCalls>
+# include <SysFloats>
+# include <SysStrings>
+# define Min(x,y) ((x) /\ (y))
+# define Max(x,y) ((x) \/ (y))
+# define UpperCase(x) ((x) & 0x7F)
+# define MyIsLetter(x) ((unsigned char) (x) >= (unsigned char) 'Ю')
+# define fileid char
+# define myAbort(x) _abort_(x)
+
+# if defined(R_11)
+#   pragma SYSCALL(setbit=0xECE1,clrbit=0xEC61);
+    extern long            setbit(long,unshort);
+    extern long            clrbit(long,unshort);
+    extern boolean         tstbit(long,unshort);
+#   define BIT_OPERS
+# elif defined(i_86)
+   extern long     setbit(register long     value:rAX:rDX,
+                          register unsigned nbit :rCX);
+   extern long     clrbit(register long     value:rAX:rDX,
+                          register unsigned nbit :rCX);
+   extern boolean  tstbit(register long     value:rAX:rDX,
+                          register unsigned nbit :rCX);
+#  undef  mfar
+#  define mfar far
+#  undef  CodeSegment
+#  define CodeSegment(x) pragma CODE(x,*,x,MAIN,ALIGN=3,READ);
+#  define BIT_OPERS
+# endif
+
+#else
+  typedef unsigned char       unchar;
+  typedef unsigned short      unshort;
+  typedef unsigned long       unlong;
+  typedef int                 boolean;
+
+# include <string.h>
+# ifndef NO_STDLIB
+#  include <stdlib.h>
+# endif
+# define _cmps(x,y,z)  memcmp(x,y,z)
+# define   MVS(x,y,z)  memcpy(z,x,y)
+# define _move(x,y,z) memmove(z,x,y)
+# define _fill(x,y,z)  memset(x,z,y)
+# define  _cps(x,y,z)  memchr(x,z,y)
+
+# define TRUE  1
+# define FALSE 0
+# define NIL   0
+
+
+# if defined(macintosh)
+#   define UpperCase(x) ((int)(x)>=0x60 ? (x)-0x20 : (x))
+#   define fileid       short
+    extern double      _stfl(char* buffer,short power);
+
+# elif defined(MSDOS)
+#   define UpperCase(x) toupper(x)
+#   define fileid       short
+
+# elif defined(unix)
+#   define fileid       short
+#   define MyIsLetter(x) ((unsigned char) (x) >= 0200)
+#   define BIT_OPERS
+    static inline boolean tstbit (long v, unshort b) { return (v>>b & 1); }
+    static inline long    clrbit (long v, unshort b) { return (v & ~(1L<<b)); }
+    static inline long    setbit (long v, unshort b) { return (v | 1L<<b); }
+    /*
+     * Преобразование символа в верхний регистр.
+     * Только для КОИ8.
+     */
+    static inline int UpperCase (unsigned char c) {
+      if (c>='a' && c<='z')       c += 'A' - 'a';       /* a - z */
+      else if (c>=0300 && c<0340) c += 040;             /* ю - ъ */
+      else if (c == 0243)         c = 0263;             /* ё */
+      return (c);
+    }
+
+# else
+#   error "Unknown Operating System"
+# endif
+  extern unsigned   Min(unsigned,unsigned);
+  extern unsigned   Max(unsigned,unsigned);
+
+  extern char*      _conv (unsigned,int,int);
+  extern unsigned   _convi(char*   ,int,int);
+  extern void        TRS  (unchar* ,unsigned,unchar*);
+  extern void        myAbort(int);
+#endif
+
+#define BadSym   0x7F
+
+#ifndef BIT_OPERS
+   extern long            setbit(long,unshort);
+   extern long            clrbit(long,unshort);
+   extern boolean         tstbit(long,unshort);
+#else
+#  undef BIT_OPERS
+#endif
+
+#define DummySize 2                        /* для массивов []         */
+
+#define forlist(x,y) for((x)=(y); (x) != NIL; (x) = (x)->next)
+
+#define AlignBuf    sizeof(short)          /* выравнивание            */
+#define Align(x)    (((x) + AlignBuf-1) & (- AlignBuf))
+
+#ifdef NO_STRERROR
+extern char *sys_errlist[];
+#define strerror(n) sys_errlist[n]
+#endif

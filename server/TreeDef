@@ -1,0 +1,240 @@
+                    /* ======================== *\
+                    ** ==       M.A.R.S.     == **
+                    ** ==  Структуры этапа   == **
+                    ** ==    трансляции      == **
+                    \* ======================== */
+
+
+#ifdef TreeMain
+#  define ext
+#else
+#  define ext extern
+#endif
+
+/*
+ * Типы обрабатываемых данных
+ */
+enum {Tbool,Tshort,Tlong,Tfloat,Tchar,Tvar,Tldata,Tvoid=0x10};
+typedef unchar datatype;
+enum {Rcount,Rsumm,Ravg,Rmax,Rmin,Rmax2,Rmin2};
+typedef unchar reducefunc;
+typedef unchar scalarfunc;
+
+/*
+ * Структура записи:
+ * +----------------+------------------+-----------------------+
+ * | массив адресов | поля фикс. длины | поля переменной длины |
+ * +----------------+------------------+-----------------------+
+ * адреса содержат адрес конца соотв. поля отн самого адреса
+ * Неопределенные значения:
+ * short,long,float: 0x800000
+ * char: 0x00 в 0-ом байте (флаг наличия) ?
+ * varchar: 0 - ая длина                  ?
+ */
+
+typedef struct {
+    short     totalleng;
+    char      nullflag;
+    datatype  type;
+    short     length;
+    short     shift;
+    char      name[DummySize];
+  } dsc_column;
+
+#define CS_Fleng  (sizeof(short)*2)
+#define CS_Ftype  (CS_Fleng+sizeof(short))
+#define CS_Fname  (CS_Ftype+sizeof(char))
+
+#define TS_Fnrec  (sizeof(short)*3)
+#define TS_Fsize  (TS_Fnrec+sizeof(long))
+#define TS_Fownr  (TS_Fsize+sizeof(long))
+#define TS_Ftype  (TS_Fownr+sizeof(short))
+#define TS_Fname  (TS_Ftype+sizeof(char))
+
+#define AS_Fuser  (sizeof(short))
+#define AS_Fread  (AS_Fuser + sizeof(short))
+#define AS_Fins   (AS_Fread + 1)
+#define AS_Fdel   (AS_Fins  + 1)
+#define AS_Fupd   (AS_Fdel  + 1)
+#define AS_leng   (AS_Fupd  + 1)
+
+#define US_Fuser  (sizeof(short))
+#define US_Fname  (US_Fuser + sizeof(short))
+#define US_Fpwd   (US_Fname + UserName)
+#define US_Fadmin (US_Fpwd  + PasswLng)
+#define US_Fcreat (US_Fadmin+ 1)
+#define US_Foper  (US_Fcreat+ 1)
+#define US_leng   (US_Foper + 1)
+
+typedef struct {
+  short      totalleng;                   /* длина dsc_table - записи */
+  short      Ncolumns;                    /* число колонок            */
+  short      Nvarlength;                  /* число полей переменной дл*/
+  short      Mfixlength;                  /* суммарная длина фикс.    */
+  short      Mtotlength;                  /* максимальная полная длина*/
+  short      dummy[2];
+} dsc_table;
+
+#define DescTable(x)  (ZDATA(Index+(x),dsc_table))
+#define DescColumn(x) (ZDATA(Index+(x),dsc_column))
+
+typedef enum {                            /* коды типа  выражения     */
+     Ecolumn, Econst, Efunc, Eproj, Eparam, Etemp, Econv, Esign, Enot,
+     Eredref, Eextproj,
+     Eif, Equery, Eexists,
+                                          /* и коды операций          */
+     Earithm  = 0x10, Eadd=Earithm  , Esub, Emult, Ediv, Emod, Ecmp,
+                              Eload , Elike ,
+     Ecompare = 0x20, Ene =Ecompare , Eeq , Ege,   Elt,  Ele,  Egt,
+
+     Elogical = 0x30, Eand, Eor
+ }  exproper;
+
+typedef struct expr*       expr;
+typedef struct node*       node;
+typedef struct nodelist*   nodelist;
+typedef struct exprlist*   exprlist;
+typedef struct collist*    collist;
+typedef struct projection* projection;
+typedef struct reduction*  reduction;
+typedef struct eqref*      eqref;
+typedef struct prjlist*    prjlist;
+
+  struct nodelist {nodelist next; node node; };
+  struct exprlist {exprlist next; expr expr; };
+  struct prjlist  {prjlist  next; projection proj;};
+
+struct projection {
+  projection next;
+  expr       expr;
+  node       owner;
+  Caddr      location;
+  char*      name;
+  projection calcLink;
+};
+
+struct reduction {
+  reduction  next;
+  reducefunc func;
+  short      source;
+  expr       arg1,arg2;
+  Caddr      location;
+};
+
+struct eqref {
+  eqref      next;               /* следующий в списке equery    */
+  exproper   mode;
+  node       eqNode;             /* вычисляемое табл.выражение   */  
+  prjlist    extprojs;           /* использованные здесь проекции*/
+  Caddr      resLocation;        /* адрес результата             */
+  Caddr      flagLocation;       /* адрес флага "считай"         */
+  Caddr      retAddr;            /* ячейки перехода при возвр.   */
+  Caddr      entryAddr;          /* адрес входа в вычисление EQ  */
+  long       cost;               /* цена выполнения запроса      */
+};
+
+enum {dirOrder,invOrder,anyOrder,constOrder,noOrder,badOrder};
+typedef struct {projection proj; short order;} sortproj;
+
+struct collist {
+  collist    next;
+  sortproj   sortproj;
+  unshort    source;
+};
+
+
+struct expr {
+  exproper mode;
+  datatype type;
+  short    leng;
+  unshort  source;
+  union {
+    expr                                         unary;
+    struct  { expr arg1, arg2;                 } binary;
+    struct  { expr cond, tvar,fvar;}             cond;
+    eqref                                        equery;
+    char*                                        constvalue;
+    reduction                                    reduction;
+    projection                                   projection;
+    struct  { table dummy; short shift, specq; } column;
+    dsc_column*                                  parameter;
+    struct  { expr arg ; scalarfunc func; datatype type;} scalar;
+  } body;
+};
+
+typedef enum {
+  SELECT,  JOIN, UNION, GROUP, ORDER, DISTINCT, TABLE,
+  CATALOG, ATTRIBUTES,
+
+  MODIFICATION = 0x10,
+  INSERT=MODIFICATION, INSVALUE, DELETE, UPDATE,
+  CRINDEX
+} nodemode;
+
+
+/*
+ * Структура, описывающия узел дерева запроса
+ */
+struct node {
+  nodemode   mode;
+  projection projlist;
+  exprlist   doBefore;
+  exprlist   doAfter;
+  short      eqLevel;
+  node       upper;
+  char*      name;
+  short      pathSize;            /*длина информации для оптимизации*/
+  union {
+    struct {exprlist predlist;   node     next;
+            table tablenum,path; exprlist pathpred;                } T;
+    struct {char*    tablename;  node     next; short spflag;
+            table    tablenum;                                     } N;
+
+    /* select */
+    struct {exprlist predlist;   node subq;                        } S;
+    /* join   */
+    struct {exprlist predlist;   nodelist subqs;                   } J;
+    /* union  */
+    struct {                     nodelist subqs;                   } U;
+    /* order, group */
+    struct {collist  orderlist;  node subq; reduction reductions;
+            short    doSort:1,doCopy:1;     Caddr*    groupvalues; } O;
+    /* distinct*/
+    struct {                     node subq;                        } D;
+
+    /* delete, update   */
+    struct {exprlist predlist;   node subq;
+            short*   fieldlist;  dsc_table*   tabdescr;            } M;
+    /* insert, insvalue */
+    struct {table    tablenum;   node subq;
+            char*    tablename;  dsc_table*   tabdescr;            } I;
+
+    /* create index */
+    struct {table    tablenum,index; dsc_table* tabdescr;          } C;
+
+    /* attbributes  */
+    struct {table    tablenum; short regime;                       } A;
+
+  } body;
+};
+
+
+/*
+ * Заголовок Parse-блока, хранящего разобранное дерево
+ */
+typedef struct parseheader {
+  short      length;                  /* длина Parse - блока          */
+  node       tablelist;               /* список используемых таблиц   */
+  node       Node;                    /* главный узел                 */
+  dsc_table* inpparams;               /* описатель входных параметров */
+  table*     filelist;                /* массив используемых таблиц   */
+  eqref      eqlist;
+} parseheader;
+
+#define GEN(x)  ((x)GetMem(sizeof(*(x)NIL)))
+#define GenEXPR GEN(expr)
+
+  ext    parseheader* ParseHeader;
+
+
+#undef ext

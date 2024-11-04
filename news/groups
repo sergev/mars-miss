@@ -1,0 +1,13 @@
+#!/usr/local/bin/marsexec
+
+logon news usenet;
+
+put - using "a28, i4, 1x, a1"
+	order (
+		select  i:info,
+			t:(group xref by group for group, cnt:count(*))
+		where   i.group = t.group
+		for     group:i.group,
+			count:t.cnt,
+			info:i.info
+	) by count desc;

@@ -1,0 +1,22 @@
+# Сборка библиотеки для MSDOS с использованием Waterloo TCP.
+# Составляются две библиотеки:
+# marssm.lib - для SMALL-режима,
+# marslg.lib - для LARGE-режима.
+# Include-файлы Waterloo TCP должны находиться в каталоге \waterloo.
+
+MODELS	= -ms
+MODELL	= -ml
+OPT	= -G -O -d -Z -a
+CFLAGS  = $(OPT) -DMSDOS -I\waterloo
+
+objs	= commit.obj compile.obj connwat.obj error.obj exec.obj fetch.obj\
+	  kill.obj lexec.obj lfetch.obj lget.obj lput.obj
+
+marssm.lib: $(objs)
+        echo done
+
+.c.obj:
+        tcc -c $(MODELS) $(CFLAGS) $*.c
+        tlib marssm -+$*
+        tcc -c $(MODELL) $(CFLAGS) $*.c
+        tlib marslg -+$*

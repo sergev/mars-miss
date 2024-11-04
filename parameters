@@ -1,0 +1,41 @@
+% Файл конфигурации базы данных MARS
+
+% Номер TCP-порта сервера
+servername      = 3836
+
+% Рабочий каталог
+workcatl        = /usr/local/lib/mars
+
+% Архивный каталог
+archive         = /usr/local/lib/mars
+
+% Каталоги данных, до 10 штук
+datacatl        = /usr/local/lib/mars
+datacatl        = /tmp
+
+% Файл подкачки
+swapfile        = /usr/local/lib/mars/swapfile
+
+% Временный файл
+tempfile        = /usr/local/lib/mars/tempfile
+
+% Таблица перекодировки текстовых данных
+%codefile       = /usr/local/lib/mars/coding
+
+% Файл обновлений
+updatefile      = /usr/local/lib/mars/updates
+
+% Размер кэша в килобайтах, не менее 10, по умолчанию 40
+cachesize       = 400
+
+% Количество буферов для скомпилированных кодов, не менее 18, не более 64
+codebufs        = 32
+
+% Количество клиентов, по умолчанию 4, не менее одного, не более 31
+agents          = 8
+
+% Размер временной памяти в килобайтах, по умолчанию 1000, не менее 100
+tempsize        = 8192
+
+% не менее 20, по умолчанию 200
+whitelocks      = 1000

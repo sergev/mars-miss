@@ -1,0 +1,5 @@
+#!/usr/local/bin/marsexec
+
+logon SYS SYSTEM;
+drop RawMailStat;
+commit;

@@ -1,0 +1,6 @@
+#!/usr/local/bin/marsexec
+
+logon SYS SYSTEM;
+
+put - using "'User        Password  A C O'/28'-'/(a12,a10,3a2)"
+	select &users for NAME,PASSWORD,ADMIN,CREATE,OPER;

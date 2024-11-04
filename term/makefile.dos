@@ -1,0 +1,14 @@
+# Сборка SQL-терминала для MSDOS с использованием Waterloo TCP.
+# Include-файлы и библиотека Waterloo TCP должны находиться
+# в каталоге \waterloo.
+
+CPLUS   = tcc -P -ml
+OPT	= -G -O -d -Z -a
+CFLAGS  = $(OPT) -DMSDOS -I\ht\scr -I\marslib
+LIBS	= \ht\scr\libscr.lib \marslib\marslg.lib \waterloo\wattcplg.lib
+
+term.exe: term.obj
+        $(CPLUS) $(CFLAGS) term.obj $(LIBS)
+
+.cc.obj:
+	$(CPLUS) $(CFLAGS) -c $*.cc

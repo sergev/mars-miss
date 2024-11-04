@@ -1,0 +1,48 @@
+select_stmt     select_expr [ ORDER BY sort_list ]
+
+select_expr     SELECT [ ALL | DISTINCT ] ( sel_item_list | '*' )
+		FROM table_list [ WHERE search_cond ]
+		[ GROUP BY column_list [ HAVING search_cond ] ]
+
+sel_item_list   [ sel_item_list ',' ] value_expr [ NAME ]
+
+table_list      [ table_list ',' ] NAME [ NAME ]
+
+column_list     [ column_list ',' ] column_spec
+
+column_spec     [ NAME '.' ] NAME
+
+sort_list       [ sort_list ',' ] ( column_spec | INTEGER ) [ ASC | DESC ]
+
+search_cond     [ search_cond OR ] bool_term
+
+bool_term       [ bool_term AND ] [ NOT ] bool_prim
+
+bool_prim       value_expr compare_op value_expr
+	|       value_expr compare_op '(' select_expr ')'
+	|       value_expr [ NOT ] LIKE value_expr
+	|       value_expr [ NOT ] IN '(' expr_list ')'
+	|       value_expr [ NOT ] BETWEEN value_expr AND value_expr
+	|       column_spec IS [ NOT ] NULL
+	|       EXISTS '(' select_expr ')'
+	|       '(' search_cond ')'
+
+compare_op      '=' | '<' | '>' | '<=' | '>=' | '!='
+expr_list       [ expr_list ',' ] value_expr
+
+value_expr      [ value_expr ( '+' | '-' ) ] term
+
+term            [ term ( '*' | '/' | '**' ) ] [ '+' | '-' ] primary
+
+primary         INTEGER
+	|       FLOAT
+	|       STRING
+	|       column_spec
+	|       scal_fun '(' expr_list ')'
+	|       aggr_fun '(' [ ALL | DISTINCT ] ( '*' | value_expr ')'
+	|       '(' value_expr ')'
+
+aggr_fun        SUM | AVG | MIN | MAX | COUNT
+
+scal_fun        ABS | ASCII | ATAN | CONCAT | COS | EXP | GAMMA |
+		INT | LOG | MOD | FLOAT | SIN | SQRT

@@ -1,0 +1,10 @@
+#!/usr/local/bin/marsexec
+
+logon news usenet;
+
+put - using "a28, i6, 1x, a1"
+	select  art
+	where   art.expired/60 < 10519200 + long(time())
+	for     from:art.from,
+		bytes:art.bytes,
+		subject:art.subject;

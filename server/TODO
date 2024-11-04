@@ -1,0 +1,78 @@
+  1) Почему нет номера версии СУБД?  Неудобно править.
+  2) Надо бы во все файлы вписать copyright автора.
+* 3) Увеличить длину имени таблицы с 20 до 30.
+     Иначе сейчас макс. длина имени индекса получается 4.
+* 4) Разрешить пробел вместо ':' в задании типов полей таблицы,
+     для совместимости с SQL.
+* 5) Сделать альтернативные имена типов CHARACTER, INTEGER, SMALLINT
+     для совместимости с SQL.
+* 6) Режим доступа READ заменить на SELECT
+     для совместимости с SQL.
+* 7) У COMMIT и ROLLBACK сделать необязательный аргумент WORK
+     для совместимости с SQL.
+* 8) Изменить имя команды FETCH на что-нибудь уникальное.
+     У стандартного SQL есть свой оператор FETCH.
+  9) Изменить синтаксис оператора INSERT
+     для совместимости с SQL.
+     Вместо:
+	INSERT (query) INTO tabname
+	INSERT VALUES assign, ... INTO tabname
+     сделать:
+	INSERT INTO tabname [(colname,...)] query
+	INSERT INTO tabname [(colname,...)] VALUES (assign, ...)
+ 10) Изменить синтаксис оператора UPDATE
+     для совместимости с SQL.
+     Вместо:
+	UPDATE tabname [WHERE expr] SET assign, ...
+     сделать:
+	UPDATE tabname SET assign,... [WHERE expr]
+*11) Вместо JOIN использовать имя операции SELECT.
+ 12) Хорошо бы иметь VIEW
+     для совместимости с SQL:
+	CREATE  VIEW [(colspec, ...)] AS query
+	DROP    VIEW tabref
+ 13) Доделать создание таблицы по запросу
+     для совместимости с SQL:
+	CREATE  tabname [(colspec, ...)] AS query
+ 14) Переделать UNION из префиксной операции в инфиксную
+     для совместимости с SQL.
+     Вместо:
+	UNION a, b, c
+     сделать:
+	a UNION [ALL] b UNION [ALL]  c
+ 15) Сделать SQL-подобный оператор SELECT:
+     Вместо:
+	SELECT subquery,...
+	[WHERE expr]
+	[FOR colname,...]
+     сделать:
+	SELECT [ALL | DISTINCT] {expr,... | *}
+	FROM subquery,...
+	[WHERE expr]
+	[GROUP BY colspec,...]
+	[HAVING expr]
+	[ORDER BY colspec,...]
+     Можно иметь совместимый вариант:
+	SELECT FROM subquery,...
+	[WHERE expr]
+	[FOR colname,...]
+	[GROUP BY colspec,...]
+	[HAVING expr]
+	[ORDER BY colspec,...]
+     Старые операторы GROUP BY и ORDER BY можно оставить.
+*16) Сделать шаблон LIKE совместимым с SQL:
+	%       любая строка, вместо '?'
+	_       любая последовательность пробелов, как и сейчас
+	?       любой символ, вместо '!'
+	[]      набор символов, как и сейчас
+ 17) Маловато интеллекта в определении имени поля по умолчанию.
+     Например:
+	create atab (a:short);
+	create btab (b:short);
+	join atab,btab for a: atab.a, b: btab.b;
+     А хотелось бы писать:
+	join atab,btab for a,b;
+     И ничто этому не мешает.
+18) Исправить ошибку в типе функций time() и gmt().
+    Сейчас приходится вызывать их как long(time()).
+    Пример ошибки: select &catalog for a:time(), b:time().

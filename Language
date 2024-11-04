@@ -1,0 +1,51 @@
+imm     LOGON   username password
+imm     COMMIT
+n/s     COMMIT WORK
+imm     ROLLBACK
+n/s     ROLLBACK WORK
+imm     ARCHIVE [NOMOD | NOFILE]
+imm     TRACE   {ALL | IO | CODE | SORT | OUTPUT | INPUT | SWAP | LOCKS | CACHE | COMMANDS} [ON | OFF]
+imm     SHOW    character
+imm     EXEC    number [(XX XX...)]
+imm     FETCH   number
+	DROP    tabname
+	DROP    INDEX indexname ON tabname
+	GRANT   CONNECT TO somebody (password)
+	GRANT   {ADMIN | CREATE | OPER} TO somebody
+	GRANT   ALL ON tabname TO somebody
+	GRANT   {READ | INSERT | DELETE | UPDATE} tabname TO somebody
+	REVOKE  CONNECT FROM somebody
+	REVOKE  {ADMIN | CREATE | OPER} FROM somebody
+	REVOKE  ALL ON tabname FROM somebody
+	REVOKE  {READ | INSERT | DELETE | UPDATE} tabname FROM somebody
+	LOCK    tabname IN {SHARE | EXCLUSIVE} MODE
+	CREATE  tabname (colname:type, ...)
+	CREATE  [INIQUE] INDEX indexname ON tabname (colname [ASC | DESC], ...)
+n/s     CREATE  tabname [(colspec, ...)] AS query
+n/s     CREATE  VIEW [(colspec, ...)] AS query
+	[COMPILE] [(colname:type, ...)] INSERT (query) INTO tabname
+mars    [COMPILE] [(colname:type, ...)] INSERT VALUES assign, ... INTO tabname
+	[COMPILE] [(colname:type, ...)] DELETE [FROM] tabname [WHERE expr]
+mars    [COMPILE] [(colname:type, ...)] UPDATE tabname [WHERE expr] SET assign, ...
+	[COMPILE] [(colname:type, ...)] [READ] query
+
+query =
+	SELECT subquery [WHERE expr] [FOR colname,...]
+	JOIN subquery,... [WHERE expr] [FOR colname,...]
+	ORDER subquery BY colname,...
+	GROUP subquery BY colname,...
+mars    UNION subquery,...
+
+subquery = (query) | tabref | &spectab
+
+tabname = [TABLE] tabref
+tabref = [username.] filename
+
+type =  SHORT | LONG | FLOAT | CHAR(len) | VARCHAR(len) | LONGDATA
+
+somebody = username | PUBLIC
+
+------------
+imm     - immediate operation
+n/s     - not supported
+mars    - differs from standard SQL

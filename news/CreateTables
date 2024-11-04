@@ -1,0 +1,58 @@
+#!/usr/local/bin/marsexec
+
+# Создаем пользователя news.
+
+logon SYS SYSTEM;
+grant connect to news (usenet);
+grant admin to news;
+grant create to news;
+commit;
+logon news usenet;
+
+# Таблица статей.
+# Уникальная по идентификатору.
+# 1) идентификатор (message-id)
+# 2) автор
+# 3) тема
+# 4) размер в байтах
+# 5) дата написания
+# 6) дата старения
+
+create art (
+	id      varchar (100),
+	from    varchar (100),
+	subject varchar (160),
+	bytes   long,
+	created long,
+	expired long,
+	body    longdata
+);
+create unique index idx on art (id);
+
+# Таблица телеконференций.
+# 1) имя телеконференции
+# 2) идентификатор статьи
+# 3) дата старения
+
+create xref (
+	id      varchar (100),
+	group   varchar (100),
+	expired long
+);
+
+# Описание телеконференций.
+# Уникальная по телеконференции.
+# 1) имя телеконференции
+# 2) описание телеконференции
+
+create info (
+	group   varchar (100),
+	info    varchar (180)
+);
+create unique index idx on info (group);
+
+grant select art to public;
+grant select xref to public;
+grant select info to public;
+
+commit;

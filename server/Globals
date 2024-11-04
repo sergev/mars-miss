@@ -1,0 +1,116 @@
+/*
+ * Глобальные переменные, общие функции
+ */
+
+#ifdef GlobalMain
+#  define ext
+#else
+#  define ext extern
+#endif
+
+
+#ifdef ZCache
+  typedef unshort       zptr;
+# define  CacheBase      0
+
+# if defined(R_11)
+
+    extern zstruct { unchar Cache [2];} Z;
+#   define Zopers
+    extern void         _GZmov(char*  ,unshort,unshort);
+    extern void         _ZGmov(unshort,unshort,char*  );
+    extern void         _ZZmov(unshort,unshort,unshort);
+    extern int          cmpsZG(unshort,char*,int  );
+#   define  ZTRS(x,y,z) TRS((char*)(x),-(y),z)
+#   define  ZDATA(x,y)  (*(y *)(Z.Cache+(x)))
+
+# elif defined(i_86) && defined(MISS)
+
+#   define Zopers
+#include <SysStrings>
+#   define Reg register
+    extern void SwapBytes(Reg char*:rSI,Reg unshort:rCX);
+    extern void ZSwapBytes(Reg unshort:rSI,Reg unshort:rCX);
+    extern void InvFloat(Reg real*:rSI);
+    extern void ZInvFloat(Reg unshort:rSI);
+#   undef  Reg
+#   define  ZDATA(x,y)  (*(y _es *)(x))
+
+# elif defined(i_86)
+
+    extern int    cmpsZZ(unsigned, unsigned, unsigned);
+    extern void   SwapBytes(char *, unsigned);
+    extern void   ZSwapBytes(unsigned, unsigned);
+    extern void   InvFloat(void *);
+    extern void   ZInvFloat(unsigned);
+    extern char far *   lpCache;
+#   define ZDATA(x,y)  (*(y far *)(lpCache+(x)))
+
+# endif
+
+
+# ifndef Zopers
+    extern void         _GZmov(char*  ,int,unshort);
+    extern void         _ZGmov(unshort,int,char*  );
+    extern void         _ZZmov(unshort,int,unshort);
+    extern int          cmpsZG(unshort,char*,int  );
+    extern void         ZTRS  (unshort,int,char*);
+# else
+#   undef Zopers
+# endif
+
+#else
+  typedef unchar*       zptr;
+# define  ZDATA(x,y)    (* (y *)(x))
+# define  _GZmov(x,y,z) MVS(x,y,z)
+# define  _ZGmov(x,y,z) MVS(x,y,z)
+# define  _ZZmov(x,y,z) _move(x,y,z)
+# define  cmpsZG(x,y,z) _cmps(x,y,z)
+# define  ZTRS(x,y,z)   TRS(x,y,z)
+  ext     unchar*       CacheBase;          /* [NbCacheBuf*BlockSize] */
+  extern  void          InvFloat(real*);
+#endif
+
+#define int0DATA(x)  ZDATA(x,short)
+#define intDATA(x)   ZDATA(Index+(x),short)
+#define Busy(x)      ((x) == (zptr) 1)
+
+
+   ext    file_elem*    Files;                  /* каталог базы       */
+   ext    table         MaxFiles;          /* макс. # табл.<=BgWrkFile*/
+
+   ext    short         NbCacheBuf;             /* число Cache-буферов*/
+
+   ext    char*         ParseBuf;               /* буфер для разбора  */
+
+   ext    short         ErrCode;                /* код ошибки         */
+   ext    short         ErrPosition;            /* позиция ошибки / -1*/
+
+   /*рабочий буфер, длина - для MISS-Talk */
+   ext    char          CommonBuffer[MaxInput+4];
+
+   ext    boolean       ScanFlag;               /* флаг сканир-ия табл*/
+
+   ext    short*        OutBuffer;              /* адрес выводного буф*/
+   ext    short         OutAgent;               /* адресат выдачи     */
+   ext    short         MesBuffer[1+sizeof(long)/sizeof(short)];
+
+   ext    unchar        KeyBuffer[MaxKeyLeng];  /* буфер для ключа    */
+   ext    short         keylength;              /* и его длина        */
+
+   ext    unsigned      TraceFlags;             /* флаги отладки      */
+   ext    short         OperSymbol;             /* приостановка выдачи*/
+
+   ext    unchar        CodeTable[256];         /* таблицы кодировок  */
+   ext    unchar        DecodeTable[256];       /* (прямая и обратная)*/
+
+   ext    long          Timer;
+   ext    long          theTimeZone;
+   ext    short         SliceTimer;
+
+   extern char*         Fdump(char*,...);       /* формир. отлад.строк*/
+   ext    jmp_buf       err_jump;               /* ловушка для ошибок */
+
+   extern void          Reply(char*);           /* трассировка работы */
+#undef ext
+

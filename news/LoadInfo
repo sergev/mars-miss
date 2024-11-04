@@ -1,0 +1,16 @@
+:
+
+awk '{
+	printf "%-79s", $1
+	for (i=2; i<=NF; ++i)
+		printf " %s", $i
+	printf "\n"
+}' newsgroups | marsexec -c '
+	logon news usenet;
+	delete info;
+	with - using "a80,a180"
+		(group char (80), info char (180))
+		insert values $group, $info into info;
+	commit;
+	archive nofile;
+'

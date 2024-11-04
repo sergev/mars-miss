@@ -1,0 +1,30 @@
+:
+dir=/var/spool/news/incoming
+
+#
+# Delete expired articles.
+#
+marsexec -c 'logon news usenet;
+	delete art where expired/60 < 10519200 + long(time());
+	delete xref where expired/60 < 10519200 + long(time());
+	commit;'
+
+#
+# Input incoming batches.
+#
+for i in $dir/[0-9]*; do
+	(
+	read hdr
+	if [ "$hdr" = "#! cunbatch" ]; then
+		gzip -d -c
+	else
+		echo "$hdr"
+		cat
+	fi | newsinject
+	) < $i && rm $i
+done
+
+#
+# Backup database.
+#
+marsexec -c 'logon news usenet; archive nofile'

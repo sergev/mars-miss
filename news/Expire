@@ -1,0 +1,9 @@
+#!/usr/local/bin/marsexec
+
+logon news usenet;
+
+delete art where expired/60 < 10519200 + long(time());
+delete xref where expired/60 < 10519200 + long(time());
+
+commit;
+archive nofile;

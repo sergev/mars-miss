@@ -1,0 +1,125 @@
+                    /* ======================== *\
+                    ** ==       M.A.R.S.     == **
+                    ** ==  Структуры агентов == **
+                    ** ==  коды их операций  == **
+                    \* ======================== */
+
+#ifdef AgentMain
+#  define ext
+#else
+#  define ext extern
+#endif
+
+   ext    jmp_buf         initial;              /* переход на INIT    */
+
+typedef enum {                            /* состояния агента         */
+  ready=0,locked,reading,dead
+} agentstate;
+
+enum {                                    /* коды диспетчеризации     */
+  jmpLocked=1,jmpWaked,jmpRepeat,jmpLastkiss,jmpDisconn,
+  jmpProceed, jmpProclock,
+  jmpRollback=0x10 
+};
+
+typedef enum {                            /* Коды выполняемых операций*/
+   OpLogon,
+   OpCreate,  OpDrop,
+   OpCompile, OpLock,
+   OpGrant  , OpRevoke,
+   OpParsed,                              /* остальным ParsBuf не нуж.*/
+
+   OpCommit=OpParsed, OpRollback, OpShow, OpTrace,
+   OpExec, OpFetch, OpArchive,
+   OpRelease, OpPutLong, OpGetLong, OpExecIndex 
+} opcodes;
+
+enum {
+  doContinue   = 0,
+  doStartFetch, doStartExec, doPutLong, doGetLong
+};
+
+#define nobody    0xFF                    /* userid "никто" или "все" */
+#define Priv_Auth   1                     /* квалификация "админ-тор" */
+#define Priv_Create 2                     /* квалификация "админ-тор" */
+#define Priv_Oper   4                     /* квалификация "оператор " */
+
+typedef enum {
+  Priv_read=0, Priv_ins, Priv_del, Priv_upd
+} privmode;
+
+typedef struct {
+  unchar codeNum;
+  unchar columnNum;
+  long   shift;
+  long   size;
+} lGetParms;
+
+/*
+ * Дескриптор агента
+ */
+typedef struct agent* agent;
+
+struct agent {
+  char           ident;                   /* номер агента             */
+  userid         userid;                  /* код пользователя         */
+  agentstate     status;                  /* состояние агента         */
+  unchar         privil;                  /* привилегии пользователя  */
+  lockblock*     waits;                   /* указатель "кого ждем"    */
+  agent          queue;                   /* очереди ожидания         */
+  char           queueheader;             /* флаг начала очереди      */
+  char           contflag;                /* флаг "продолжение оп-ции"*/
+  jmp_buf        pentry;                  /* вход в процесс           */
+  long           starttime;               /* время нач. транз. или -1 */
+  opcodes        opcode;                  /* выполняемая операция     */
+  codeaddress    codes[MaxCodes];         /* адреса кодов запросов    */
+  unsigned       resources;               /* счетчик для диспетчер-ции*/
+  short          waittime;                /* время от начала запроса  */
+  char*          inpbuf;
+  union {
+    unchar         codeNum;               /* номер сканера и т.п.     */
+    lGetParms      lGet;
+    unchar         showSym;               /* параметр "Show"             */
+    unchar         archMode;              /* параметр "Archive"      */
+    short          traceMask;
+  }              parms;
+};
+
+/*
+ * Элемент списка прав доступа к таблице
+ */
+typedef struct {
+  userid who;
+  char   what;
+} privil;
+
+#define pdescr(x) (ZDATA(x,privil))
+
+
+/*
+ * Элемент описания пользователя в таблице "&USERS"
+ */
+typedef struct {
+  char   name    [UserName];                /* имя пользователя       */
+  char   password[PasswLng];                /* пароль пользователя    */
+  unchar privil;                            /* привилегии - " -       */
+  char   dummy;
+} logon_elem;
+
+/* Максимальное число зарегистрированных пользователей */
+#define Nusers ((BlockSize-sizeof(page))/sizeof(logon_elem))
+
+#define Byte0DATA(x) ZDATA(x,unchar)
+#define LogonDATA(x) ZDATA(x,logon_elem)
+
+   ext    unshort         NbAgents;        /* число агентов           */
+   ext    agent           AgentTable;      /* таблица агентов         */
+   ext    agent           Agent;           /* активный агент          */
+   ext    agent           Ready;           /* очередь готовых         */
+
+   extern void      Inqueue(agent*,agent); /* вставка в очередь       */
+
+#define LimitResources  (Agent->resources >= MaxResources)
+#define SliceDelta(x) ((SliceTimer+TimerCycle-(x))%TimerCycle)
+
+#undef  ext

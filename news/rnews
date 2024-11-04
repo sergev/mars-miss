@@ -1,0 +1,6 @@
+:
+dir=/var/spool/news/incoming
+file=`date +%m%d%H%M%S`
+
+cat > $dir/$file
+sleep 1

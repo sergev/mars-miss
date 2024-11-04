@@ -1,0 +1,108 @@
+#!/usr/local/bin/marsreport
+
+# Синтаксис файла описания отчета:
+#   logon user password
+#   query { text }
+#   file "output"
+#   format { name=format, ... }
+#   align up
+#   pagesize 66
+#   sum { name, ... }
+#   line (page,alone) { text }
+#   report heading { text }
+#   page summary { text }
+#   report footing { text }
+#   group name { text }
+#   page summary { text }
+#   group footing { text }
+#   info heading { text }
+#   info footing { text }
+#   page heading { text }
+#   page footing { text }
+
+# Регистрация в базе.  Если имя пользователя и/или пароль
+# не заданы, они запрашиваются с терминала.
+logon SYS SYSTEM
+
+# SQL-запрос к базе.  Это обязательное поле.
+query {
+	select &catalog for
+	name:   char(NAME,20),
+	t:      TYPE,
+	nrec:   NRECORDS,
+	sz:     SIZE,
+	sum:    SIZE
+}
+
+# Имя файла для вывода отчета.  По умолчанию - в стандартный вывод.
+#file "| od -c"
+
+# Форматы колонок.
+# Для строковых: Lnum - влево, Rnum - вправо, Cnum - по центру.
+# Для целых чисел: Inum.
+# Для вещественных чисел: Enum.num, Fnum.num, Gnum.num, Dnum.num.
+# "Денежный" формат (в рублях прописью): $num.
+format {
+	sz=i6, nrec=i6, sum=$60
+}
+
+# Выравнивание полей по вертикали, up либо down.
+align up
+
+# Размер листа по вертикали.
+pagesize 66
+
+# Cписок полей суммирования, только для чисел.
+sum { sum }
+
+# Основной текст, простые и суммируемые поля данных.
+# Поля задаются в тексте в фигурных скобках, например {name}.
+# LINE
+# LINE (PAGE)
+# LINE (ALONE)
+# LINE (PAGE,ALONE)
+line {
+| {name}               | {t}  | {sz}   |   {nrec} |
+}
+
+# Заголовок отчета, никаких полей.
+report heading {
+---------------------------------------------------
+| Relation             | Type |   Size | Nrecords |
+|----------------------|------|--------|----------|
+}
+
+# Страничные суммы, только суммируемые поля.
+#page summary
+
+# Концевик отчета, только суммируемые поля.
+report footing {
+---------------------------------------------------
+}
+
+# Заголовок группы, только группируемые поля.
+group name {
+Group: {name}
+---------------------------------------------------
+}
+
+# Страничные суммы, суммируемые и группируемые поля.
+#page summary
+
+# Концевик группы, суммируемые и группируемые поля.
+group footing {
+---------------------------------------------------
+Total: {sum}
+}
+
+# Заголовок информации, только группируемые поля.
+#info heading
+
+# Заголовок информации, суммируемые и группируемые поля.
+#info footing
+
+# Заголовок страницы, суммируемые и группируемые поля.
+#page heading
+
+# Концевик  страницы, суммируемые и группируемые поля.
+#page footing

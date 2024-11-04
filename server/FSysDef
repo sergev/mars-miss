@@ -1,0 +1,397 @@
+                    /* =========================== *\
+                    ** ==       M.A.R.S.        == **
+                    ** ==   Файловые операции   == **
+                    ** == системная зависимость == **
+                    \* =========================== */
+
+
+                      /* ======================== *\
+                      ** = MISS file operations = **
+                      \* ======================== */
+
+#if defined(MISS)
+# include <FileSystem>
+# include <FileIO>
+# include <SysIO>
+# include <Passwords>
+# include <ActRecord>
+# include <MemSystem>
+# include <SysFilesOp>
+
+# define fileret int
+# define FixWorkCat
+# define FixServName
+# define FixCache
+
+# define FParm   FSource
+# define FCode   FData
+# define FUpdate FData
+# define FWork   FData
+
+# define FSdeleteID(FD,catal)    DeleteFile(FD,catal)
+# define FSopen(name,catal,type) Xopen(name,catal,TRUE ,type)
+# define FSfind(name,catal,type) Xopen(name,catal,FALSE,type)
+# define FSclose(FD)             CloseFile(FD)
+# define WorkCatalog             WorkCatal
+# define GetMemory(x,y) \
+  if((retcode = ExpandStorage(x)) < 0) _abort_(retcode); \
+  (char*)(y) = _SliceAddr;
+
+#if     defined(R_11)
+# define FSsetEOF(FD,size)       SetEOF(FD,size)
+# define GetFileLength(FD) GetFileLeng(FD)
+#elif defined(i_86)
+# define SectorSize 0x100
+# define GetFileLength(FD)  GetFileLeng(FD)*(GetSectorSize(FD)/SectorSize)
+# define FSsetEOF(FD,size)  SetEOF(FD,size/(GetSectorSize(FD)/SectorSize))
+#else
+# error "Unknown Processor"
+#endif
+  static FileItem theItem;
+  static int      Xopen(char*,filelabel,boolean,char);
+
+  static char ArchCatName[] = "$ARCHIVE";
+  static char SwpFileName[] = " SwapFile";
+  static char TmpFileName[] = " TempFile";
+  static char UpdFileName[] = " Updates";
+  static char DebFileName[] = " TestStream";
+  static char CodFileName[] = "$CODING";
+
+static int Xopen(name,catal,new,type)
+               char* name; filelabel catal; boolean new; char type; {
+  int i = 0;
+  _fill((char*) &theItem,sizeof(FileItem),0);
+  _fill(theItem.name.c,sizeof(theItem.name),' ');
+  while(*name !=0 && i<sizeof(Fname)) theItem.name.c[i++]= *name++;
+  theItem.type  = type;
+  theItem.p     = _OwnPassword;
+  theItem.access= FilAccNo;
+  return(new ? OpenFile(&theItem,catal) : FindFile(&theItem,catal) );
+}
+
+
+                  /* ============================= *\
+                  ** = Macintosh file operations = **
+                  \* ============================= */
+
+#elif defined(macintosh)
+# define  fileret long
+# define  __MYTYPES__
+# include "MacDefines"
+
+# define FSfind(name,catal,type)        Xfind(name,catal,type)
+# define FSopen(name,catal,type)        Xopen(name,catal,type)
+# define FSclose(FD)                    FSClose(FD)
+# define FSdelete(name,catalogid,type)  FSDelete(C2P(name),catalogid)
+# define FSsetEOF(FD,size)              SetEOF(FD,size*SectorSize)
+# define SectorSize                     1
+
+# define FSource 'TEXT'
+# define FCatal  '****'
+# define FData   'DATA'
+# define FUpdate 'UPDT'
+# define FWork   'TEMP'
+# define FParm   FSource
+# define FCode   'MRSC'
+
+  extern short   WorkCatalog;
+  static fileret Xfind(char*,short,long);
+  static fileret Xopen(char*,short,long);
+  static fileret Copen(unchar*,short);
+  static fileret _Fopen(char*,long,boolean);
+  static long    filesize;
+  static char*   retsys;
+
+
+  static char ArchCatName[] = "ARCHIVE";
+  static char SwpFileName[] = "SwapFile";
+  static char TmpFileName[] = "TempFile";
+  static char UpdFileName[] = "Updates";
+  static char DebFileName[] = "TestStream";
+  static char CodFileName[] = "Coding";
+
+  extern int       SetName(char*);           /* занесение сетевого ид.*/
+
+static long Xfind(fileName, catNum, type) 
+      char* fileName; short catNum; long type; {
+  short result;
+  long  retcode;
+  retcode = FSOpen(C2P(fileName),catNum,&result);
+  return(retcode == 0 ? (long)(unsigned short)result : retcode);
+  /* здесь бы проверить OWNER, type */
+}
+
+static long Xopen(fileName, catNum, type)
+    char* fileName; short catNum; long type; {
+  Create(C2P(fileName),catNum,'MARS',type);
+  return(Xfind(fileName,catNum,type));
+}
+
+static long Copen(fileName, catNum) unchar* fileName; short catNum; {
+  WDPBRec myParm;
+  long    retcode;
+  myParm.ioNamePtr  = fileName;
+  myParm.ioVRefNum  = catNum;
+  myParm.ioWDProcID = 0l;
+  myParm.ioWDDirID  = 0;
+  retcode = PBOpenWD(&myParm,0);
+  return(retcode == 0 ?
+               (long)(unsigned short)myParm.ioVRefNum : retcode);
+}
+
+# define GetMemory(x,y) {*(char**)&(y)=NewPtr(x); if(MemError()) myAbort(MemError());}
+# define GetFileLength(FD)                (GetEOF(FD,&filesize), filesize)
+
+static long _Fopen(fileName,type,new) 
+                   char* fileName; long type; boolean new; {
+  short catalog = WorkCatalog;
+  char  saved;
+  int   length;
+  long  retcode;
+
+  if(*fileName == '@') {
+    ++fileName;
+    catalog = 0;
+  }
+
+  length = (char*)memchr(fileName,0,0xFE) - fileName;
+  saved = *--fileName; *fileName = (unsigned char) length;
+  if(type == FCatal) {
+    retcode = Copen((unchar*)fileName,catalog);
+  } else {
+    short result;
+    if(new) Create((unchar*)fileName,catalog,'MARS',type);
+    retcode = FSOpen((unchar*)fileName,catalog,&result);
+    if(retcode == 0) retcode = (long)result & 0xFFFF;
+  }
+  *fileName = saved;
+  return(retcode);
+}
+
+                    /* ========================= *\
+                    ** = MSDOS file operations = **
+                    \* ========================= */
+
+
+#elif defined(MSDOS)
+
+/* #include        <io.h> */
+/* #include        <sys\types.h> */
+/* #include        <sys\stat.h> */
+/* #include        <fcntl.h> */
+#include        <dos.h>
+#include        <windows.h>
+
+#define SwpFileName  "swapfile"
+#define TmpFileName  "tempfile"
+#define UpdFileName  "updates"
+#define CodFileName  "coding"
+#define DebFileName  "teststr.txt"
+
+#define SectorSize              1
+#define GetFileLength(x)        filelength(x)
+#define FSdelete(FD,catal)      unlink(FD)
+#define FSopen(name,catal)      Xopen(name,catal)
+#define FSfind(name,catal)      Xfind(name,catal)
+#define FSclose(FD)             _lclose(FD)
+#define FSsetEOF(FD,size)       (FD)
+  char               *WorkCatalog;
+#define GetMemory(x,y) \
+  { HANDLE hTempMemory;\
+/*  MessageBox(hTableWnd,(LPSTR)Fdump("%5.10",x),(LPSTR)"Get Memory",MB_OK);*/\
+    hTempMemory = LocalAlloc(LMEM_FIXED,x); \
+    if ( !hTempMemory )  abort(777);\
+    (y) = (void near *)LocalLock(hTempMemory);\
+  }
+
+  int FAR PASCAL      _lclose(int);
+  extern void         _lstrcpy(char far *, char far *);
+  extern int          _lstrlen(char far *);
+
+  static OFSTRUCT     TempFileDescr;
+  static char         TempFileName[128];
+  extern HWND         hTableWnd;
+
+void MakeFullName(name, catal)
+  char far *name;
+  char far *catal;
+{
+  if ( *catal ) {
+    _lstrcpy(TempFileName, catal);
+    strcpy (TempFileName+strlen(TempFileName),"\\"  );
+  } else {
+    *TempFileName = 0;
+  }
+  _lstrcpy(TempFileName + strlen(TempFileName), name);
+/*  MessageBox(hTableWnd, (LPSTR)TempFileName, "Try open file:", MB_OK); */
+}
+
+int Xfind(char far *name, char far *catal)
+{
+  MakeFullName(name,catal);
+  return( OpenFile(TempFileName, &TempFileDescr, OF_READWRITE) );
+}
+
+int Xopen(char far *name, char far *catal)
+{
+  int retcode;
+  MakeFullName(name,catal);
+  retcode = OpenFile(TempFileName, &TempFileDescr, OF_EXIST);
+  if ( retcode<0 ) {
+    retcode = OpenFile(TempFileName, &TempFileDescr, OF_CREATE);
+    if ( retcode>=0 )   _lclose(retcode);
+  }
+  if ( retcode>=0 )
+      retcode = OpenFile(TempFileName, &TempFileDescr, OF_READWRITE);
+  return( retcode );
+}
+
+                    /* ======================== *\
+                    ** = UNIX file operations = **
+                    \* ======================== */
+
+#elif defined(unix)
+# include <sys/types.h>
+# include <sys/stat.h>
+# include <sys/errno.h>
+
+/*
+ * Тип дескриптора файла/каталога.
+ */
+# define fileret int
+
+/*
+ * Типы файлов.
+ */
+# define FCatal                 1       /* каталог */
+# define FSource                0       /* файл */
+# define FParm                  0
+# define FCode                  0
+# define FData                  0
+# define FUpdate                0
+# define FWork                  0
+
+# define SwpFileName            "swapfile"
+# define TmpFileName            "tempfile"
+# define UpdFileName            "updates"
+# define CodFileName            "coding"
+# define DebFileName            "teststr.txt"
+
+# define SectorSize             1
+# define GetFileLength(FD)      unix_filelength(FD)
+# define FSopen(name,dir,typ)   unix_open(name,dir,0,1)
+# define FSfind(name,dir,typ)   unix_open(name,dir,0,0)
+# define _Fopen(name,typ,new)   unix_open(name,WorkCatalog,new,0)
+# define FSclose(FD)            unix_close(FD)
+# define FSdelete(name,dir,typ) unix_unlink(name,dir)
+# define FSsetEOF(FD,size)      /* ftruncate(FD,size) на самом деле не нужно */
+# define GetMemory(sz,ptr)      (ptr = MyAlloc (sz))
+
+/*
+ * Дескриптор рабочего каталога.
+ */
+extern int WorkCatalog;
+extern char *WorkCatName;
+extern int errno;
+
+# define ArchCatName            WorkCatName
+
+#ifdef NO_FCHDIR
+# define MAXFD 32
+
+static char *dirtab [MAXFD+1];
+
+int fchdir (int fd) {
+  if (fd>=0 && fd<=MAXFD && dirtab[fd])
+    return (chdir (dirtab [fd]));
+  errno = ENOENT;
+  return (-1);
+}
+#endif
+
+int unix_open (char* name, int dir, int cleanflag, int createflag)
+{
+  struct stat st;
+
+  /* если имя файла относительное, переходим в нужный каталог */
+  if (*name != '/' && fchdir (dir) < 0)
+    return (-1);
+
+  /* обнулим файл, если нужно */
+  if (cleanflag)
+    close (creat (name, 0664));
+
+  if (stat (name, &st) < 0) {
+    /* создаем новый файл, если его нет */
+    if (createflag) {
+      close (creat (name, 0664));
+      return (open (name, 2));
+    }
+    /* нет такого файла */
+    return (-1);
+  }
+
+  /* если каталог - открываем на чтение */
+  if ((st.st_mode & S_IFMT) == S_IFDIR) {
+    int d = open (name, 0);
+#ifdef NO_FCHDIR
+    if (d < 0)
+      return (d);
+    if (d > MAXFD) {
+      printf ("MARS: unix_open: out of directory descriptors: %s\n", name);
+      close (d);
+      return (-1);
+    }
+    dirtab [d] = malloc (strlen (name) + 1);
+    if (! dirtab [d]) {
+      printf ("MARS: unix_open: out of memory on %s\n", name);
+      close (d);
+      return (-1);
+    }
+    strcpy (dirtab [d], name);
+#endif
+    return (d);
+  }
+  /* обычный файл открываем на чтение/запись */
+  return (open (name, 2));
+}
+
+int unix_unlink (char* name, short dir)
+{
+  if (fchdir (dir) < 0)
+    return (-1);
+  return (unlink (name));
+}
+
+int unix_close (int fd)
+{
+#ifdef NO_FCHDIR
+  if (fd <= MAXFD && dirtab [fd]) {
+    free (dirtab [fd]);
+    dirtab [fd] = 0;
+  }
+#endif
+  return (close (fd));
+}
+
+long unix_filelength (short fd)
+{
+  long cur = lseek (fd, 0L, 1);         /* запоминаем текущее положение */
+  long size = lseek (fd, 0L, 2);        /* идем в конец файла */
+  lseek (fd, cur, 0);                   /* восстанавливаем текущее положение */
+  return (size);
+}
+
+void *MyAlloc (int sz)
+{
+  void *ptr = malloc (sz);
+  if (! ptr) {
+    printf ("MARS: out of memory (%d)\n", sz);
+    exit (-1);
+  }
+  return (ptr);
+}
+
+#else
+# error "Unknown Operating System"
+#endif

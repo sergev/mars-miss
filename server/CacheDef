@@ -1,0 +1,100 @@
+                    /* ======================== *\
+                    ** ==       M.A.R.S.     == **
+                    ** == Структуры в/вывода == **
+                    ** ==   нижнего уровня   == **
+                    \* ======================== */
+
+
+              /* параметры рабочих файлов   */
+
+#ifdef CacheMain
+#  define ext
+#else
+#  define ext extern
+#endif
+
+
+#ifdef ZCache
+#  define DiskZIO(x,y,z,q,f) DiskIO(x,(char*)(y),z,q,(f) | 0x80)
+#else
+#  define DiskZIO(x,y,z,q,f) DiskIO(x,y,z,q,(f)       )
+#endif
+
+
+#define HashSize       19               /* размер HASH-таблицы        */
+#define HASH(x,y)      ((((x)*0x99) ^ (y)) % HashSize)
+
+
+typedef struct CacheElem {
+     table table; page page;
+     PD                locking;
+     boolean           modified;        /* флаг модификации блока     */
+     struct CacheElem* prev;            /* сцепки для LRU алгоритма   */
+     struct CacheElem* next;
+     zptr              shift;           /* адрес блока в сегменте Cach*/
+}* CacheElem;
+
+/*
+ * Размер "белого" Lock-а (без адреса блока в Update-файле)
+ */
+#define whitesize (sizeof(struct PD)-sizeof(page))
+
+typedef struct {                            /* контрольная запись */
+  long     timer;                           /* Sync-файла         */
+  unshort  archcount,dummy;
+  unshort  nfiles,nblacks;                  /* она пишется в файл */
+} Scheck;                                   /* в начале и конце   */
+
+
+typedef enum {
+    RG_start, RG_debug, RG_command, RG_restore, RG_init, RG_check
+  } startmode;
+
+
+
+   ext    CacheElem       CacheTable;
+   ext    CacheElem       First;
+   ext    char*           SyncBuffer;
+   ext    unsigned        SyncSize;
+
+   ext    fileid          UpdFile;              /* метка Update файла */
+   ext    fileid          TempFile;             /* метка Temp - файла */
+   ext    fileid          ArchCat;              /* метка Archive кат. */
+   ext    fileid          PrmFile;              /* метка Params файла */
+   ext    fileid          CodeFile;             /* метка Coding файла */
+
+   ext    short           Hashvalue;
+
+   ext    unchar*         UpdMap;       /* бит-карта свободных блоков */
+   ext    unchar*         UpdMEnd;      /* и ее конец                 */
+   ext    page            UpdShift;     /* длина синхро-информ (блоки)*/
+
+   ext    PD              BlackLocks;   /* таблица "черных" LOCK-ов   */
+   ext    PD              WhiteLocks;   /* таблица "белых" LOCK-ов    */
+   ext    PD              EndLocks;     /* конец таблицы Lock-ов      */
+
+   ext    PD              HashTable[HashSize];    /* головы списков   */
+   ext    PD              BlackFree;    /* голова свободных "черных"  */
+   ext    PD              WhiteFree;    /* голова свободных новых     */
+
+   ext    short           Nnewpages;    /* число new-блоков (для Arch)*/
+
+   ext    short           NbLocks;      /* кол-во black LOCK-ов       */
+   ext    short           NbNewLocks;   /* кол-во white LOCK-ов       */
+
+   ext    fileid*         FileLabels;   /* метки файлов               */
+   ext    fileid*         CatlLabels;   /* метки каталогов            */
+
+   ext    short           TempFree;             /* список свободных   */
+   ext    page            TempSize;             /* тек. размер TMPфайл*/
+   ext    short           TempSpace;            /* размер карты TMP   */
+   ext    short*          TempMap;              /* карта TMP - файлов */
+
+   ext    struct {                              /* таблица раб. файлов*/
+      unchar owner;                             /* какой агент создал */
+      unchar codeNum;                           /* в каком коде(илиFF)*/
+      short first;                              /* какой блок 1-ый    */
+                 }        TempHeads[NbTempFiles];
+
+
+#undef ext

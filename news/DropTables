@@ -1,0 +1,8 @@
+#!/usr/local/bin/marsexec
+
+logon news usenet;
+
+drop art;
+drop xref;
+drop info;
+commit;

@@ -1,0 +1,44 @@
+                    /* ========================== *\
+                    ** ==       M.A.R.S.       == **
+                    ** == Описание "машинного" == **
+                    ** ==         кода         == **
+                    \* ========================== */
+
+enum {
+
+  Mbegfetch, Mretfetch, Mendfetch, Mindret, Mmodret,
+  Minitmod, Mcountmod, Mstndf,
+  MinitU,   Mmovrec, Minsind,
+  Minsert,  Mdelete, Mupdate,
+  Mshortcv, Mlongcv, Mfloatcv,
+  Mshortng, Mlongng, Mfloatng,
+  Mloadleng,
+
+  Mwithaddr,
+  Mjump=Mwithaddr, Mcjump, Mejump, Mclrbuf, Mchuniq, 
+  MsetSconst, MsetLconst, McmpSconst,McmpLconst, MadmLconst,
+  Mcatscan, Mcolscan,
+  Mlookind, Mbegsind, Mnxtind, Mcnvkey,
+  Mbegscan, Mgetrec,  Mnxtrec,
+  Mbegsort, Mputsort, Mfinsort,Mgetsort,
+  Mshortop, Mlongop,  Mfloatop,
+  Mshortst, Mlongst,  Mfloatst,
+  Mshortst1,Mlongst1, Mfloatst1,           /* @28 Jun 92 */
+  Mldatald, Mldatast,
+  Mwithleng,
+  Mlike=Mwithleng, Mcmpstr, Mloadstr, Mstorestr, Mlea,
+
+  Mend
+};
+
+enum {
+  Jne,  Jeq,  Jge, Jlt, Jle, Jgt,
+  Juc,  Jend
+};
+
+
+typedef struct {unchar oper, parm; Caddr  addr;} Mcode;
+
+typedef struct {unchar oper, parm;
+    Caddr  addr; unshort leng; Caddr saddr;
+               } Mlcode;

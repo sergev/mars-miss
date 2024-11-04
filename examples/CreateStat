@@ -1,0 +1,14 @@
+#!/usr/local/bin/marsexec
+
+logon SYS SYSTEM;
+create RawMailStat (
+	HostFrom        varchar(40),
+	HostTo          varchar(40),
+	UserFrom        varchar(150),
+	UserTo          varchar(150),
+	Size            integer,
+	Time            char(8),
+	Date            char(8)
+);
+grant all on RawMailStat to public;
+commit;

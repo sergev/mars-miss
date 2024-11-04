@@ -1,0 +1,15 @@
+# Сборка примера в MSDOS с использованием Waterloo TCP.
+# Include-файлы и библиотеки Waterloo TCP должны
+# находиться в каталоге \waterloo.
+
+MODEL	= -ms
+#MODEL	= -ml
+OPT	= -G -O -d -Z -a
+CFLAGS  = $(MODEL) $(OPT) -DMSDOS -I\waterloo -I..\client
+LIBS	= ..\client\marssm.lib \waterloo\wattcpsm.lib
+
+sample.exe: sample.obj
+	tcc $(CFLAGS) sample.obj $(LIBS)
+
+.c.obj:
+        tcc -c $(CFLAGS) $*.c

@@ -1,0 +1,15 @@
+#!/usr/local/bin/marsexec
+
+logon SYS SYSTEM;
+
+put - using "'Name              Type Size   Nrec  Owner     Table'/"
+	    "52'-'/(a20,a2,i5,i7,2x,a10,a20)"
+	select c:&catalog, u:&users
+	where c.OWNER=u.USERID
+	for
+		Name:   c.NAME,
+		Type:   c.TYPE,
+		Size:   c.SIZE,
+		Nrec:   if c.NRECORDS>=0 then c.NRECORDS else -1,
+		Owner:  u.NAME,
+		Table:  c.TABLENAME;

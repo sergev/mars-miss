@@ -1,0 +1,16 @@
+#!/usr/local/bin/marsexec
+
+logon news usenet;
+
+put - using "i1, '/', i1, '/', i1, ' (', i1, ') ', a1, ' <', a1, '>'"
+	order (
+		select  art
+		for     from:art.from,
+			bytes:art.bytes,
+			subject:art.subject,
+			creat:art.created/60-10519200
+	) by creat desc
+	for     y:90+year(creat),
+		m:month(creat),
+		d:day(creat),
+		bytes, subject, from;

@@ -1,0 +1,297 @@
+                    /* ======================== *\
+                    ** ==       M.A.R.S.     == **
+                    ** == Основные параметры == **
+                    ** ==     и структуры    == **
+                    \* ======================== */
+
+#include "TypesDef"
+
+                /* Общие параметры         */
+#define BlockSize   0x400                  /* размер блока в байтах   */
+#define TempSlice   10                     /* квант tmp-памяти(блоков)*/
+
+
+#define BgWrkFiles  0x80                   /* рабочие файлы агентов   */
+#define MaxFileNu   0xB0                   /* макс # файла <= 0xFD    */
+#define NbTempFiles (MaxFileNu-BgWrkFiles) /* число рабочих файлов    */
+
+#define MaxFileName 30                     /* max длина имени таблицы */
+#define MaxColName  30                     /* max длина имени столбца */
+#define UserName    10                     /* длина имени пользователя*/
+#define PasswLng     8                     /* длина пароля  - " -     */
+
+
+              /* параметры сложности запроса */
+#define MaxString   500                    /* max длина строки        */
+#define MaxRowLeng  (BlockSize/2-10)       /* max длина кортежа       */
+#define MaxProj     40                     /* max # проекций(Union)   */
+#define MaxSortCol  15                     /* max # сорт-ых столбцов  */
+#define NParseBuf /*4*/  6                 /* буфер разбора в блоках  */
+#define MaxInput    6000 /* было 2000 */   /* буфер параметров в байт.*/
+#define ParseSize   (NParseBuf*BlockSize)  /* буфер разбора в байтах  */
+
+
+
+              /* параметры индекс-файлов     */
+#define MaxIndCol   3                      /* max # колонок в индекс  */
+#define MaxDepth    20                     /* max высота B-дерева     */
+#define MaxKeyLeng  200                    /* max размер ключа <255   */
+#define MaxIndRIDs  100                    /* max число RID в ключе   */
+/*assert (MaxIndRids*sizeof(RID)+MaxKeyLeng + sizeof(ipageheader) +
+         ldescr < BlockSize) */
+
+              /* параметры оптимизатора/генератора кода */
+#define CdBlockSize 0x200                  /* буфер кода в байтах     */
+#define MaxCodes    8                      /* max число кодов у агента*/
+#define MaxCodeSize 8                      /* max размер кода (<16)   */
+
+#define MaxLongSlice (MaxInput-8)          /* < InpBuffSize-8         */
+
+              /* параметры диспетчеризации */
+#define MaxResources  50                  /* квант передиспетчеризации*/
+#define IOResource     5                  /* при чтении блока с диска */
+#define CacheResource  1                  /* при нахожд. блока в CASH */
+
+
+#define ContTime      15                  /* время для ответа "раб-ем"*/
+#define LockTime      15                  /* время для ответа "ждем"  */
+#define TimerCycle  3600                  /* >> ContTime, LockTime    */
+
+/*--------------------------------------------------------------------*/
+
+#define UserFile       0                   /* файл с именами польз-лей*/
+#define MaxPage        0xFFFF              /* макс. (<) номер блока   */
+#define UniqIndexFlag  0x80000000          /* recordnum у uniq ирдекса*/
+
+typedef unchar   table;                    /* номер файла             */
+typedef unshort  page;                     /* номер блока в файле     */
+typedef long     lockmask;                 /* гребенка Shared-lock-а  */
+typedef unchar   userid;                   /* код пользователя        */
+
+
+typedef struct   {table table; unchar index; page page;} RID;
+
+/*
+ * Блокировки
+ */
+#define Sltype  0                          /* S-lock                  */
+#define Xltype  1                          /* X-lock                  */
+#define Oltype  2                          /* O-lock (на таблицу)     */
+#define Nltype -1                          /* X-lock без чтения(новая)*/
+
+/* элемент блокировки (машинно-зависимо) */
+typedef union {
+  lockmask Slock;                          /*гребенка битов при Shared*/
+  struct  {                                /*при X-lock :             */
+#ifdef ReverseBytes
+    page modpage;
+#endif
+#if (Rbitfield == 1)                       /*поля идут с младших бит  */
+    unshort  owner:5,                      /*кто захватил             */
+             decrflag:1,                   /*флаг изменеия кол-ва     */
+             newspace:9,                   /*занятая часть блока/Align*/
+             Xflag:1;                      /*флаг X-lock              */
+#else                                      /*поля идут со старших бит */
+    unshort  Xflag:1, newspace:9, decrflag:1, owner:5;
+#endif
+#ifndef ReverseBytes
+    page modpage;
+#endif
+  } Xlock;
+  long     type;                           /*тип блокировки           */
+} lockblock;
+
+#define clearlock(x) ((x).Slock = 0)
+#define Xlocked(x)   ((x).type  < 0)
+#define Nlocked(x)   ((x).Slock== 0)
+
+/* блок захвата и модификации страницы */
+typedef struct PD* PD;                     /* Page Descriptor         */
+struct PD {
+  unchar     deltakey;
+  table      table;                        /* номер таблицы           */
+  page       oldpage;                      /* адрес страницы          */
+  lockblock  locks;                        /* блокировки страницы     */
+  PD         link;                         /* цепочки в HASH-списках  */
+  page       newpage;                      /* номер новой стр. или 0  */
+};
+
+typedef struct {
+  table      table;
+  unchar     dummy;
+  page       addr;
+  long       size;
+} ldataDescr;
+
+/*
+ * Файлы (таблицы и индексы)
+ */
+enum filebits {
+  BsyFile =  1,                           /* непустой элемент каталога*/
+  OldFile =  2,                           /* есть физический файл     */
+  DelFile =  4,                           /* файл логически стерт     */
+  CreFile =  8,                           /* файл создается (created) */
+  DrpFile = 16                            /* файл стирается (droped)  */
+};
+
+enum fileKinds {
+  tableKind,indexKind,ldataKind
+};
+
+typedef struct {                          /* опис-ль поля-части ключа */
+  short shift;                            /* смещение ключа в записи  */
+  unshort numFlag:1,invFlag:1,            /* флаг "цифровой","desc",fl*/
+          flvrFlag:1,                     /* флаг "float/varchar"     */
+          length:12;                      /* длина поля               */
+} indcolumn;
+
+/*
+ * Описатель таблицы
+ */
+#define NoFile 0xFF                       /* null - файл              */
+#define MaxIndxName (MaxFileName-sizeof(indcolumn)*MaxIndCol-sizeof(long))
+
+typedef struct file_elem {
+  lockblock iR,iW,iM;          /* блокировки (должны идти подряд)     */
+  page      size;              /* размер файла таблицы в блоках       */
+  unchar    status:5,kind:2;   /* xxxFile - биты                      */
+  table     mainfile;          /* table->"NoFile", index,long->table# */
+  table     nextfile;          /* последний -> "NoFile"               */
+  userid    owner;             /* создатель таблицы                   */
+  long      recordnum;         /* число записей/число ключей          */
+  page      actualsize;        /* текущий размер таблицы/индекса      */
+  union  {
+    char   tablename[MaxFileName];  /* имя таблицы                    */
+    struct {
+      char indexname[MaxIndxName];  /* имя индекса                    */
+      long  clustercount;           /* число страниц при скан-ии Indx */
+      indcolumn columns[MaxIndCol]; /* список колонок                 */
+    }      indexdescr;
+    struct {
+      short shift;                  /* shift of the field in the rec  */
+    }      ldatadescr;
+  } b;
+} file_elem;
+
+/*
+ * Виртуальный адрес в сгенерированном коде
+ */
+#define Cnil    0
+typedef unshort Caddr;
+
+/*
+ * Описатель адреса программы в "агенте"
+ */
+typedef struct {                          /* адрес программы          */
+  unshort  outside :1,                    /* флаг "программа в SWAP"  */
+           codesize:4,                    /* размер кода в блоках     */
+           address :11;                   /* #блока в памяти/на диске */
+} codeaddress;
+
+
+/*
+ * Сканер для insert, delete, update
+ */
+ enum {
+   mStageInited,mStageLdataIns,mStageSubDel,mStageIndIns,
+   mStageRecord,mStageLook
+ };
+ 
+typedef struct {
+  RID    ident;                           /* идентификатор записи     */
+  unchar stage;                           /* стадия обновления        */
+  table  subfile;                         /* текущ. обнов-ый инд/ldata*/
+  table  scantable;                       /* используемый индекс      */
+  unchar iKey;                            /* #RID в ключе индекса     */
+  unchar secondary;                       /* флаг просмотра цепочки   */
+  unchar insindex;
+  page   inspage;
+} UpdateScan;
+
+/*
+ * Сканер для индексов
+ */
+typedef struct {
+  UpdateScan  RIDscan;                    /* сканер таблицы           */
+  page        page;                       /* страница индекса         */
+  short       shift;                      /* смещение в ней           */
+  short       keyLeng;                    /* длина ключа              */
+  unchar      keyBody[DummySize];         /* тело ключа               */
+} IndexScan;
+#define IndexScanSize (sizeof(IndexScan)-DummySize)
+
+/*
+ * Сканер для сортировок
+ */
+#define MaxMergeLev 4                     /* макс. уровень слияний    */
+#define MaxMergeStr 4                     /* макс. число потоков      */
+
+typedef struct {                          /* уровни сортировки        */
+  table file; char filled;                /* temp-файл ур-ня, #потоков*/
+  page  ends[MaxMergeStr];                /* концы потоков            */
+} SortLevel;
+
+typedef struct {                          /* сканер сортировки        */
+  table      sortfile;                    /* файл входа сортировки    */
+  char       doGroup:1,                   /* флаг выделения групп     */
+             wasGroup:1,
+             copyOut:1;                   /* копировать запись под G  */
+  short      maxlength;                   /* max длина записи         */
+  short      begcompare;                  /* начало сравниваемых      */
+  short      endcompare;                  /* конец  сравниваемых      */
+  long       groupcount;                  /* счетчик строк в группе   */
+  short      nrecords;                    /* число неотсортированых   */
+  page       sortpage;                    /* текущая страница sort    */
+  SortLevel  levels [MaxMergeLev];        /* merge-потоки             */
+} SortScan;
+
+
+/*
+ * Отладочные выдачи (биты TraceFlags)
+ */
+enum {TraceIO       =0x001,                /* ввод/вывод файлов       */
+      TraceCode     =0x002,                /* машинный код запроса    */
+      TraceSort     =0x004,                /* вход сортировки; слияние*/
+      TraceOutput   =0x008,                /* ответы пользователю     */
+      TraceInput    =0x010,                /* запросы от пользователя */
+      TraceSwap     =0x020,                /* память под коды запросов*/
+      TraceLocks    =0x040,                /* блокировка/разблокиров. */
+      TraceCache    =0x080,                /* обращения к Cache       */
+      TraceCommands =0x100                 /* непрер.ввод команд оп-ра*/
+};
+
+/*
+ * Коды ошибок
+ */
+typedef enum {
+   ErrOverflow =1, ErrSyntax, ErrName, ErrSyst, ErrSymbol, ErrKey,
+   ErrNum,         ErrLeng,   ErrString,
+   ErrComplicated,
+   ErrDoubleDef,   ErrUndefined,
+   ErrExists,      ErrFull,       ErrNoExists,
+   ErrType,
+   ErrNoCode,
+   ErrModified,
+   ErrColNum,     ErrColName,
+   ErrDeadlock,   ErrInit,
+   ErrReduction,  ErrGroup,
+   ErrNoTempFile,
+   ErrTableSpace, ErrIndexSpace,  ErrModSpace,
+   ErrNotuniq,
+   ErrLockSpace,
+   ErrCommand,
+   ErrParameters,
+   ErrClosed,
+   ErrManyCodes,
+   ErrRights,
+   ErrUser,      ErrPassw,
+   ErrTempSpace,
+   ErrEquery,    ErrEqmany,      ErrEqempty,
+   ErrBigSort,
+   ErrInterrupted,
+   ErrLongSpace,
+   ErrLongNum
+ } errcode;
+
+
+#include "Globals"

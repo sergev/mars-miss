@@ -1,0 +1,64 @@
+# For Turbo C++ 1.0
+#------------------
+CPLUS           = tcc -P
+CC              = tcc
+CFLAGS		= -ml -G -O -d -Z -a
+
+SCRLIB          = libscr.lib
+OBJS            = Scrdos.obj Popup.obj Box.obj Menu.obj curses.obj
+
+$(SCRLIB): $(OBJS)
+	del $(SCRLIB)
+	tlib $(SCRLIB)/C +Scrdos+Popup+Box+Menu+curses, screen.lst
+
+tests:	hello.exe hv.exe hellcurs.exe
+
+clean:
+	del *.obj
+	del *.exe
+	del *.bak
+	del *.lib
+	del *.lst
+	del *.map
+
+rename:
+	mv box.cc Box.cc
+	mv makefile Makefile.dos
+	mv makefile.unx Makefile
+	mv menu.cc Menu.cc
+	mv menu.h Menu.h
+	mv popup.cc Popup.cc
+	mv screen.cc Screen.cc
+	mv scrdos.cc Scrdos.cc
+	mv screen.h Scrdos.h
+	mv scrunix.h Screen.h
+	mv termcap.h Termcap.h
+	mv termcap.cc Termcap.cc
+	mv termlib.cc Termlib.cc
+	mv termgoto.cc Termgoto.cc
+	mv tty.cc Tty.cc
+	mv key.cc Key.cc
+
+.cc.obj:
+	$(CPLUS) $(CFLAGS) -c $<
+
+.c.obj:
+	$(CC) $(CFLAGS) -c $<
+
+hv.exe: hv.obj $(SCRLIB)
+	$(CPLUS) $(CFLAGS) hv.obj $(SCRLIB)
+
+hello.exe: hello.obj $(SCRLIB)
+	$(CPLUS) $(CFLAGS) hello.obj $(SCRLIB)
+
+hellcurs.exe: hellcurs.obj $(SCRLIB)
+	$(CPLUS) $(CFLAGS) hellcurs.obj $(SCRLIB)
+
+Box.obj: Box.cc Screen.h
+Menu.obj: Menu.cc Screen.h Menu.h
+Popup.obj: Popup.cc Screen.h
+Screen.obj: Screen.cc Screen.h
+hv.obj: hv.cc Screen.h
+hello.obj: hello.cc Screen.h
+curses.obj: Screen.h curses.h
+hellcurs.obj: hellcurs.c curses.h

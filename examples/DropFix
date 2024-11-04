@@ -1,0 +1,6 @@
+#!/usr/local/bin/marsexec
+
+logon SYS SYSTEM;
+drop сотрудники;
+drop отделы;
+commit;

@@ -1,0 +1,17 @@
+#!/usr/local/bin/marsexec
+
+logon SYS SYSTEM;
+
+with "mailstat" (
+		hFrom   varchar(40),
+		uFrom   varchar(150),
+		hTo     varchar(40),
+		uTo     varchar(30),
+		sz      long,
+		tm      char(8),
+		dt      char(8)
+	)
+	insert values $hFrom, $hTo, $uFrom, $uTo, $sz, $tm, $dt
+	into RawMailStat;
+
+commit;

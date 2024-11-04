@@ -1,0 +1,7 @@
+/*
+ * встроенные функции
+ */
+enum {
+  fUser,fTime, fGMTime, fMinute, fWeekDay,fYear,fMonth,fDay,fSize,fToUpper,fToLower,
+  fLongSize
+};

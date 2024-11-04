@@ -1,0 +1,36 @@
+#!/usr/local/bin/marsexec
+
+logon SYS SYSTEM;
+
+create сотрудники (
+	фамилия         char(15),
+	зарплата        float,
+	отдел           smallint,
+	рождение        smallint
+);
+create отделы (
+	начальник       char(15),
+	бюджет          float,
+	отдел           smallint
+);
+
+with "employees" using "6x,a12,5x,i1,12x,i4,9x,f6.2" (
+		кто     char(12),
+		от      smallint,
+		рожд    smallint,
+		ск      float
+	)
+	insert values $кто, $ск, $от, рождение = $рожд
+	into сотрудники;
+
+with "departments" using "20x,i1,5x,a11,2x,f7.2" (
+		от      smallint,
+		кто     char(11),
+		бюд     float
+	)
+	insert values $кто, бюджет=$бюд, отдел=$от
+	into отделы;
+
+grant select сотрудники to public;
+grant select отделы to public;
+commit;

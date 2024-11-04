@@ -1,0 +1,73 @@
+#!/usr/local/bin/marsreport
+
+# Пример выдачи отчета в постраничном виде.
+
+logon SYS SYSTEM
+
+query {
+	group  (select stat where site like 'z%'
+		for site, tbytes, ttim, date)
+	by site, date
+	for
+		site:   char(site,14),
+		b:      sum(tbytes),
+		t:      sum(ttim),
+			date
+}
+
+format { site=L14, b=i10, t=i7 }
+sum { b, t }
+
+line {
+|                | {b}        | {t}     | {date}   |
+}
+
+report heading {
+----------------------------------------------------
+| Абонент        |      Байты | Секунды | Дата     |
+----------------------------------------------------
+}
+
+#page summary {
+#}
+
+report footing {
+		   {b}          {t}
+
+Отчет составлен {&DATE}    в {&TM}
+}
+
+group site {
+| {site}         |            |         |          |
+}
+
+#page summary {
+#}
+
+group footing {
+|                |---------------------------------|
+|                | {b}        | {t}     |          |
+|--------------------------------------------------|
+}
+
+info heading {
+(продолжение)
+
+}
+
+info footing {
+
+(продолжение)
+}
+
+page heading {
+
+КИАЭ =================================== Январь 1993
+
+}
+
+page footing {
+
+		страница{&P}
+
+}

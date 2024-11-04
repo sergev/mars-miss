@@ -1,0 +1,202 @@
+                    /* ========================= *\
+                    ** ==       M.A.R.S.      == **
+                    ** == Структуры машинного == **
+                    ** ==         кода        == **
+                    \* ========================= */
+
+/*
+   Hblock
+ H=======H
+ H   *   H голова списка загруженных кодов (для LRU - вытеснения)
+ H===|===H
+    /
+   /
+  /       Agent #n
+ |
+ | H===========================H
+ | H                           H
+ | H                           H
+ | H=====H=====H=====H         H
+ | H  *  H NIL H  *  H         H
+ | H==|==H=====H==|==H=========H
+ |   /           /
+ |  /           /
+ | |    -------
+ | |  /
+ | | |   ---------       Код запроса #2 агента #n
+ | | |  |          \
+ | | V  V           |
+ +-->H========H=====|====H      -----> H==================H
+   | H        H     *    H    /        H                  H
+   | H========H----------H   /   -> H==================H  H
+ +---H---*    H     *----H---  /    H                  H  H
+ | | H========H----------H    /     H                  H  H
+ | | H        H     *----H----      H                  H  H
+ | | H        H----------H          H                  H  H
+ | | H        H    NIL   H          H                  H  H
+ | | H========+==========H          H                  H  H
+ | | H                   H          H                  H  H
+ | | H                   H          H                  H  H
+ | | H                   H          H                  H  H
+ | | H===================H          H                  H==H
+ | |   0-ой блок кода               H                  H
+ | |                                H==================H
+ | |                                 дополнительные блоки
+ | |                                     кода и данных
+ | |
+ |  \
+ |   |   ---------       Код запроса #0 агента #n
+ |   |  |          \
+ |   V  V           |
+ +-->H========H=====|====H      -----> H==================H
+     H   #    H     *    H    /        H                  H
+     H========H----------H   /   -> H==================H  H
+ +---H---*    H     *----H---  /    H                  H  H
+ |   H========H----------H    /     H                  H  H
+ |   H        H     *----H----      H                  H  H
+ |   H        H----------H          H                  H  H
+ |   H        H   NIL    H          H                  H  H
+ |   H========+==========H          H                  H  H
+ |   H                   H          H                  H  H
+ |   H                   H          H                  H  H
+ |   H                   H          H                  H  H
+ |   H===================H          H                  H==H
+ |     0-ой блок кода               H                  H
+ |                                  H==================H
+ |                                     дополнительные блоки
+ |                                        кода и данных
+ |
+ |
+ |        Agent #m
+ |
+ | H===========================H
+ | H                           H
+ | H                           H
+ | H=====H=====H=====H         H
+ | H NIL H  *  H NIL H         H
+ | H=====H==|==H=====H=========H
+ |         /
+ |        /
+ |       /
+ |      /
+ |     /
+ |    /
+ |   |   ---------       Код запроса #1 агента #m
+ |   |  |          \
+ |   V  V           |
+ +-->H========H=====|====H      -----> H==================H
+     H        H     *    H    /        H                  H
+     H========H----------H   /   -> H==================H  H
+     H  NIL   H     *----H---  /    H                  H  H
+     H========H----------H    /     H                  H  H
+     H        H     *----H----      H                  H  H
+     H        H----------H          H                  H  H
+     H        H   NIL    H          H                  H  H
+     H========+==========H          H                  H  H
+     H                   H          H                  H  H
+     H                   H          H                  H  H
+     H                   H          H                  H  H
+     H===================H          H                  H==H
+       0-ой блок кода               H                  H
+                                    H==================H
+                                     дополнительные блоки
+                                         кода и данных
+*/
+
+
+#ifdef CodeMain
+#  define ext
+#else
+#  define ext extern
+#endif
+
+
+#define SwappedOut(x)   ((x).outside)      /* проверка,что код выкинут*/
+
+typedef enum { CdDirect, CdData, CdCode, CdFree} blocktype;
+typedef struct CdBlock  * CdBlock;
+
+struct head0 {
+  blocktype blocktype;                         /* тип блока           */
+  unshort   freespace;                         /* длина свободного    */
+};
+
+struct CdBlock {
+  struct head0   head;
+  char           data[CdBlockSize-sizeof(struct head0)];
+};
+
+enum {
+  stageClosed,stageWaitLong,stageFetch,stageData
+};
+
+/*
+ * Структура нулевого блока кода (он используется под программу)
+ */
+typedef struct CdBlockH * CdBlockH;
+
+struct CdBlockH {                              /* 0-ой блок (LDS)     */
+  struct head0 head;
+  CdBlockH nextloaded;                         /* следующий загруж-ный*/
+  unchar   owner;                              /* номер агента-влад-ца*/
+  unchar   codenum;                            /* номер кода у агента */
+  unchar   stage;                              /*                     */
+  char     modflag;                            /* флаг:код для мод-ции*/
+  unchar   Nblocks;                            /* длина кода в блоках */
+  unchar   dumdum;
+  CdBlock  PageMap[MaxCodeSize];               /* карта памяти        */
+  short    execentry;                          /* смещение Exec       */
+  struct {                                     /* указатели           */
+    Caddr    contentry;                        /* вход на продолжение */
+    Caddr    inpbuf;                           /* адрес вх. буфера    */
+    Caddr    outbuf;                           /* адрес вых. буфера   */
+    Caddr    modscan;                          /* адрес сканера модиф.*/
+    Caddr    modfields;                        /* список модифиц.полей*/
+    Caddr    ldataParams;                      /*                     */
+    Caddr    ldataColumns;                     /*                     */
+  }        ptrs;
+  short    maxibuff,minibuff,nivars;           /* описатели вх. парам.*/
+  long     modcounter;                         /* счетчик модифици-го */
+
+  table    ldataTempFile;
+  table    Ntableused;                         /* число использ. файл.*/
+  table    tableused[DummySize];               /* исп-ые файл (не раб)*/
+};
+
+typedef struct {
+  short paramNumber;
+  short paramShift;
+  long  filled;
+} ldataParamDescr;
+
+typedef struct {
+  short columnNumber;
+  short columnShift;
+} ldataColumnDescr;
+
+#define XwapLeng (MaxCodes*MaxCodeSize*MaxAgents) /* размер Swap-файла*/
+
+
+#define CdShift     BlockSize
+#define IsZaddr(x) ((x) < CdShift)
+#ifdef CdShort
+# define RealAddr(x) ((char*)CodeBuf + (x) - CdShift)
+# define VirtAddr(x) (Caddr)((char*)(x) - (char*)CodeBuf + CdShift)
+#else
+# define VirtAddr(x) ((Caddr)(x))
+# define RealAddr(x) ((char*)(x))
+#endif
+
+
+  ext    CdBlock        Eblock;                /* список своб. блоков */
+  ext    CdBlockH       Hblock;                /* список 0-ых блоков  */
+
+  ext    short          NCodeBuf;              /* число буферов кода  */
+  ext    CdBlock        CodeBuf;               /* блоки для кода      */
+  ext    short*         TrnsAddr;              /* трансляция адресов  */
+
+  ext    fileid         SwapFile;              /* файл Swapping-а кода*/
+
+  ext    unchar*        SwapMap;               /* карта swap-файла    */
+  ext    short          SwapSize;              /* длина карты Swap    */
+#undef ext
