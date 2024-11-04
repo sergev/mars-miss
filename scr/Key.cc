@@ -1,7 +1,6 @@
-extern "C" {
-	#include <setjmp.h>
-	#include <signal.h>
-};
+#include <setjmp.h>
+#include <signal.h>
+#include <stdlib.h>
 
 #include "Screen.h"
 #include "Termcap.h"
@@ -25,7 +24,7 @@ struct KeyPrivate {
 
 static jmp_buf wakeup;
 
-static void badkey ()
+static void badkey (int sig)
 {
 	longjmp (wakeup, -1);
 }
@@ -35,8 +34,10 @@ static void badkey ()
 // First, check if there is ->str.
 // Then compare lengths, then strings.
 // If equal, check ->tcap field.
-static int compkeys (struct Keytab *a, struct Keytab *b)
+static int compkeys (const void *va, const void *vb)
 {
+        const struct Keytab *a = (const struct Keytab *) va;
+        const struct Keytab *b = (const struct Keytab *) vb;
 	int cmp;
 
 	if (! a->str) {
@@ -147,9 +148,11 @@ int Screen::GetKey ()
 	Flush ();
 nextkey:
 	c = InputChar ();
-	for (struct Keytab *kp=keydata->keymap; kp->str; ++kp)
+	struct Keytab *kp = keydata->keymap;
+	for (; kp->str; ++kp) {
 		if ((char) c == kp->str[0])
 			break;
+        }
 	if (! kp->str) {
 #ifdef DOC
 		if (c == cntrl ('_')) {
@@ -175,7 +178,7 @@ nextkey:
 #endif
 	} else if (! kp->str [1]) {
 		c = kp->val;
-	} else if (j = setjmp (wakeup)) {       // look for escape sequence
+	} else if ((j = setjmp (wakeup))) {       // look for escape sequence
 		// time out or unknown escape sequence
 		alarm (oldalarm);
 		FlushTtyInput ();

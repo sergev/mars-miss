@@ -16,7 +16,7 @@ static char *tname;                     // terminal name
 static char *tcapfile;                  // termcap file name
 static char *tbuf;                      // terminal entry buffer
 static char *envtermcap;                // global variable TERMCAP
-static hopcount;                        // detect infinite loops
+static int hopcount;                    // detect infinite loops
 
 static char *tskip (char *);
 static char *tdecode (char *, char **);

@@ -3,15 +3,26 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
 #ifdef USE_UNIX_DOMAIN
 #include <sys/un.h>
 #else
 #undef AF_UNIX
 #endif
 
-main (int argc, char **argv)
+int socktcpip (char *host, int portnum);
+int sockunix (int portnum);
+int sockfifo (int port, int *fifo);
+void prstring (char *str, int len);
+
+int main (int argc, char **argv)
 {
 	int sock, fifo;
 	char *host, *port;
@@ -240,7 +251,7 @@ printf ("j\n");
 	return (sock);
 }
 
-prstring (char *str, int len)
+void prstring (char *str, int len)
 {
 	int c;
 

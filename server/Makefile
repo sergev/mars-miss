@@ -14,7 +14,11 @@
 #                  -DNO_SUN_LEN -DNO_STRERROR -DNO_FCHDIR -DNO_MEMMOVE
 
 # For 386bsd
-CC              = cc -pipe -O -fstrength-reduce -finline-functions
+#CC              = cc -pipe -O -fstrength-reduce -finline-functions
+#CFLAGS          = -DUSE_UNIX_DOMAIN
+
+# For Mac OSX
+CC              = cc -O
 CFLAGS          = -DUSE_UNIX_DOMAIN
 
 SHELL           = /bin/sh

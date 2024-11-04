@@ -2,6 +2,8 @@
  * Пример программы, использующей СУБД MARS.
  */
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <mars.h>
 
 /* запрос на идентификацию */

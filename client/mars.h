@@ -121,4 +121,4 @@ extern char *DBerror (int);
 };
 #endif
 
-#endif __mars_h__
+#endif /* __mars_h__ */

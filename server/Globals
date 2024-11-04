@@ -114,3 +114,4 @@
    extern void          Reply(char*);           /* трассировка работы */
 #undef ext
 
+    void SwapBytes (char* data, int length);

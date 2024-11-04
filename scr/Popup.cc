@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "Screen.h"
 #include "extern.h"
 
@@ -8,13 +9,16 @@ struct choice {
 };
 
 static struct choice tab [3];
-static cnum;
+static int cnum;
 
 void Screen::Error (int c, int i, char *head, char *reply, char *s, ...)
 {
 	char buf [100];
 
-	vsprintf (buf, s, (char *) (&s + 1));
+        va_list ap;
+        va_start(ap, s);
+	vsnprintf (buf, sizeof(buf), s, ap);
+        va_end(ap);
 	Popup (head, buf, 0, reply, 0, 0, c, i);
 }
 
@@ -59,7 +63,7 @@ int Screen::Popup (char *head, char *mesg, char *mesg2,
 	// Draw shadow.
 	for (int i=0; i<w; ++i)
 		AttrLow (r+h, c+i+1);
-	for (i=0; i<h; ++i)
+	for (int i=0; i<h; ++i)
 		AttrLow (r+i+1, c+w);
 
 	if (c1) {
@@ -152,7 +156,7 @@ char *Screen::editString (int r, int c, int w, char *str, int cp, int color)
 		int key = GetKey ();
 		switch (key) {
 		default:
-			if (key<' ' || key>'~' && key<0300 || key>255) {
+			if (key<' ' || (key>'~' && key<0300) || key>255) {
 				Beep ();
 				continue;
 			}
@@ -245,7 +249,7 @@ char *Screen::GetString (int w, char *str, char *head, char *mesg, int color, in
 	// Draw shadow.
 	for (int i=0; i<w; ++i)
 		AttrLow (r+h, c+i+1);
-	for (i=0; i<h; ++i)
+	for (int i=0; i<h; ++i)
 		AttrLow (r+i+1, c+w);
 
 	static char buf [129];

@@ -32,11 +32,17 @@ CPLUS   = g++ -pipe -Wall -O -fstrength-reduce -finline-functions
 CC      = gcc -pipe -Wall -O -fstrength-reduce -finline-functions
 CFLAGS  = -DTERMIOS
 
+# For Mac OSX
+#------------
+CPLUS   = c++ -pipe -Wall -O
+CC      = cc -pipe -Wall -O
+CFLAGS  = -DTERMIOS
+
 # Use standard libtermcap, instead of internal termcap library
 #-------------------------------------------------------------
-#CAPSRC  = Termlib.cc
-#CAPOBJ  = Termlib.o
-#LIBS    = -ltermcap
+CAPSRC  = Termlib.cc
+CAPOBJ  = Termlib.o
+LIBS    = -ltermcap
 
 $(LIB): $(OBJS)
 	[ "$?" != "" ] && ar r $(LIB) $? && ranlib $(LIB)

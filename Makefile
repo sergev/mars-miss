@@ -1,6 +1,5 @@
 SHELL   = /bin/sh
-#SUBDIRS = server client proto sample exec report scr term
-SUBDIRS = client proto sample exec report scr term
+SUBDIRS = server client proto sample exec report scr term
 
 all:
 	@for dir in $(SUBDIRS); do (cd $$dir;\

@@ -1,7 +1,10 @@
+#include <stdarg.h>
+
 #define cntrl(c) ((c) & 037)
 #define meta(c) ((c) | 0400)
 
 typedef short *ScreenPtr;
+class Screen;
 
 class Box {
 	friend class Screen;
@@ -51,13 +54,13 @@ private:
 
 	int NormalAttr;
 	int ClearAttr;
-	const int GraphAttr     = 0x8000;
+	static const int GraphAttr     = 0x8000;
 
-	const int VisualBold    = 1;    // Есть повышенная яркость (md)
-	const int VisualDim     = 2;    // Есть пониженная яркость (mh)
-	const int VisualInverse = 4;    // Есть инверсия (so или mr)
-	const int VisualColors  = 8;    // Есть цвета (NF, NB, CF, CB, C2, MF, MB)
-	const int VisualGraph   = 16;   // Есть псевдографика (G1, G2, GT)
+	static const int VisualBold    = 1;    // Есть повышенная яркость (md)
+	static const int VisualDim     = 2;    // Есть пониженная яркость (mh)
+	static const int VisualInverse = 4;    // Есть инверсия (so или mr)
+	static const int VisualColors  = 8;    // Есть цвета (NF, NB, CF, CB, C2, MF, MB)
+	static const int VisualGraph   = 16;   // Есть псевдографика (G1, G2, GT)
 
 	int UpperCaseMode;
 
@@ -81,8 +84,6 @@ private:
 	struct TtyPrivate *ttydata;
 	struct KeyPrivate *keydata;
 
-	friend void tstp ();
-
 	int Init ();
 	void Open ();
 	void Flush ();
@@ -91,7 +92,6 @@ private:
 
 	int InitCap (char *buf);
 	void GetCap (struct Captab *tab);
-	char *Goto (char *movestr, int x, int y);
 
 	void SetTty ();
 	void ResetTty ();
@@ -104,7 +104,6 @@ private:
 	void pokeChar (int y, int x, int c);
 	void putChar (unsigned char c);
 	int putRawChar (unsigned char c);
-	void putStr (char *s);
 	void clearScreen ();
 	char *skipDelay (char *str);
 	void scroolScreen ();
@@ -117,17 +116,17 @@ public:
 	int Lines;
 	int Columns;
 
-	const int ULC           = '\20';
-	const int UT            = '\21';
-	const int URC           = '\22';
-	const int CLT           = '\23';
-	const int CX            = '\24';
-	const int CRT           = '\25';
-	const int LLC           = '\26';
-	const int LT            = '\27';
-	const int LRC           = '\30';
-	const int VERT          = '\31';
-	const int HOR           = '\32';
+	static const int ULC           = '\20';
+	static const int UT            = '\21';
+	static const int URC           = '\22';
+	static const int CLT           = '\23';
+	static const int CX            = '\24';
+	static const int CRT           = '\25';
+	static const int LLC           = '\26';
+	static const int LT            = '\27';
+	static const int LRC           = '\30';
+	static const int VERT          = '\31';
+	static const int HOR           = '\32';
 
 	Screen (int colormode=2, int graphmode=1);
 	~Screen ();
@@ -164,8 +163,9 @@ public:
 
 	void Put (int c, int attr=0);
 	void Put (Box &box, int attr=0);
-	void Put (char *str, int attr=0)
+	void Put (const char *str, int attr=0)
 		{ while (*str) Put (*str++, attr); }
+	void putStr (char *s);
 
 	void Put (int y, int x, int ch, int attr=0)
 		{ Move (y, x); Put (ch, attr); }
@@ -180,8 +180,8 @@ public:
 
 	void Print (int attr, char *fmt, ...);
 	void Print (int y, int x, int attr, char *fmt, ...);
-	void PrintVect (int attr, char *fmt, void *vect);
-	void PrintVect (int y, int x, int attr, char *fmt, void *vect)
+	void PrintVect (int attr, char *fmt, va_list vect);
+	void PrintVect (int y, int x, int attr, char *fmt, va_list vect)
 		{ Move (y, x); PrintVect (attr, fmt, vect); }
 
 	int GetChar (int y, int x) { return scr[y][x]; }
@@ -199,6 +199,7 @@ public:
 	void Sync ();
 	void Redraw () { clearScreen (); Sync (); }
 	void Beep () { beepflag = 1; }
+	char *Goto (char *movestr, int x, int y);
 
 	void DelLine (int line, int attr=0);
 	void InsLine (int line, int attr=0);

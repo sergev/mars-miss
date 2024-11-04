@@ -7,6 +7,7 @@
 #endif
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include "report.h"
 
 short           PageCount = 0;          /* номер страницы */
@@ -66,7 +67,7 @@ static desc_elem* ColumnTab [MaxColumns+Nbuiltin] = {
 
 desc_elem **Columns = ColumnTab + Nbuiltin;
 
-static FILE*    Output = stdout;        /* выходной файл или труба */
+static FILE*    Output;                 /* выходной файл или труба */
 static char*    InputText;              /* текст описания отчета */
 
 extern char *optarg;
@@ -94,6 +95,7 @@ int main (int argc, char **argv)
 	long tim;
 	struct tm *t;
 
+        Output = stdout;
 	for (;;) {
 		switch (getopt (argc, argv, "u:p:o:l:c:")) {
 		case EOF:

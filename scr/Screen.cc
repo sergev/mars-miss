@@ -4,9 +4,8 @@
 // #define STRINIT              // send 'is' on display open
 // #define NOKEYPAD             // don't use 'ks', 'ke'
 
-extern "C" {
-	#include <signal.h>
-};
+#include <stdio.h>
+#include <signal.h>
 
 #include "Screen.h"
 #include "Termcap.h"
@@ -15,7 +14,7 @@ extern "C" {
 const int NOCHANGE = -1;
 
 static char MS, C2;
-static NF, NB, LINES, COLS;
+static int NF, NB, LINES, COLS;
 static char *AS, *AE, *AC, *GS, *GE, *G1, *G2, *GT;
 static char *CS, *SF, *SR;
 static char *CL, *CE, *CM, *SE, *SO, *TE, *TI, *VI, *VE, *VS;
@@ -159,7 +158,7 @@ static struct Keytab keytab [] = {
 #ifdef SIGTSTP
 static Screen *screenptr;
 
-static void tstp ()
+static void tstp (int sig)
 {
 	if (screenptr) {
 		screenptr->putStr (screenptr->Goto (CM, 0, screenptr->Lines-1));
@@ -241,7 +240,7 @@ char *s;
 }
 #endif
 
-Screen::Screen (int cmode=2, int gmode=1)
+Screen::Screen (int cmode, int gmode)
 {
 	VisualMask = VisualInverse;
 	if (cmode > 1)
@@ -356,21 +355,21 @@ int Screen::Init ()
 			MB = "0123456789ABCDEF";
 		for (int i=0; i<16; ++i)
 			ctab [i] = btab [i] = -1;
-		for (i=0; i<16 && i<NF; ++i)
+		for (int i=0; i<16 && i<NF; ++i)
 			if (! MF [i])
 				break;
 			else if (MF[i]>='0' && MF[i]<='9')
 				ctab [MF [i] - '0'] = i;
 			else if (MF[i]>='A' && MF[i]<='F')
 				ctab [MF [i] - 'A' + 10] = i;
-		for (i=0; i<16 && i<NB; ++i)
+		for (int i=0; i<16 && i<NB; ++i)
 			if (! MB [i])
 				break;
 			else if (MB[i]>='0' && MB[i]<='9')
 				btab [MB [i] - '0'] = i;
 			else if (MF[i]>='A' && MF[i]<='F')
 				btab [MB [i] - 'A' + 10] = i;
-		for (i=1; i<8; ++i) {
+		for (int i=1; i<8; ++i) {
 			if (ctab[i] >= 0 && ctab[i+8] < 0)
 				ctab [i+8] = ctab [i];
 			if (ctab[i+8] >= 0 && ctab[i] < 0)
@@ -455,11 +454,11 @@ nomem:          outerr ("out of memory in Screen Init\n");
 		firstch [i] = lastch [i] = NOCHANGE;
 		lnum [i] = i;
 	}
-	for (i=0; i<Lines; ++i) {
+	for (int i=0; i<Lines; ++i) {
 		scr[i] = new short [Columns];
 		oldscr[i] = new short [Columns];
 	}
-	for (i=0; i<Lines; ++i) {
+	for (int i=0; i<Lines; ++i) {
 		if (! scr[i] || ! oldscr[i])
 			goto nomem;
 		for (ScreenPtr sp=scr[i]; sp < scr[i]+Columns; ++sp)
@@ -801,7 +800,7 @@ void Screen::scroolScreen ()
 			}
 			for (int i=n; i>0; --i) {
 				short *temp = oldscr[botline];
-				for (y=botline; y>topline; --y)
+				for (int y=botline; y>topline; --y)
 					oldscr[y] = oldscr[y-1];
 				oldscr[topline] = temp;
 			}
@@ -813,7 +812,7 @@ void Screen::scroolScreen ()
 			}
 			for (int i=n; i<0; ++i) {
 				short *temp = oldscr[topline];
-				for (y=topline; y<botline; ++y)
+				for (int y=topline; y<botline; ++y)
 					oldscr[y] = oldscr[y+1];
 				oldscr[botline] = temp;
 			}
@@ -922,11 +921,12 @@ void Screen::Put (int c, int attr)
 	default:
 		pokeChar (cury, curx++, c | attr);
 		return;
-	case '\t':
+	case '\t': {
 		int n = 8 - (curx & 7);
 		while (--n >= 0)
 			pokeChar (cury, curx++, ' ' | attr);
 		return;
+        }
 	case '\b':
 		--curx;
 		return;
@@ -1064,23 +1064,29 @@ void Screen::Clear (int y, int x, int ny, int nx, int attr, int sym)
 			pokeChar (y, x+i, sym);
 }
 
-void Screen::PrintVect (int attr, char *fmt, void *vect)
+void Screen::PrintVect (int attr, char *fmt, va_list vect)
 {
 	char buf [512];
 
-	vsprintf (buf, fmt, (void*) vect);
+	vsnprintf (buf, sizeof(buf), fmt, vect);
 	Put (buf, attr);
 }
 
 void Screen::Print (int attr, char *fmt, ...)
 {
-	PrintVect (attr, fmt, &fmt + 1);
+        va_list ap;
+        va_start(ap, fmt);
+	PrintVect (attr, fmt, ap);
+        va_end(ap);
 }
 
 void Screen::Print (int y, int x, int attr, char *fmt, ...)
 {
 	Move (y, x);
-	PrintVect (attr, fmt, &fmt + 1);
+        va_list ap;
+        va_start(ap, fmt);
+	PrintVect (attr, fmt, ap);
+        va_end(ap);
 }
 
 void Screen::HorLine (int y, int x, int nx, int attr)

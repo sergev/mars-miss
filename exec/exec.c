@@ -85,7 +85,7 @@ void setvar (int n, char *val)
  * или
  *      marsexec [-v] файл арг1 арг2 ...
  */
-int main (char argc, char **argv)
+int main (int argc, char **argv)
 {
 	progname = *argv++;
 	--argc;
@@ -106,6 +106,7 @@ int main (char argc, char **argv)
 			}
 	}
 	setvar (0, progname);
+	yyinit (stdin);
 	if (cflag) {
 		char *query;
 

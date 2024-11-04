@@ -1,16 +1,16 @@
 //
 // Интерактивный интерфейс с базой данных MARS.
 //
-extern "C" {
-	#include <stdio.h>
-	#include <signal.h>
-	#ifdef unix
-		#include <sys/time.h>
-	#else
-		#include <bios.h>
-		struct timeval { unsigned long tv_sec, tv_usec; };
-	#endif
-};
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <signal.h>
+#if defined(unix) || defined(__APPLE__)
+        #include <sys/time.h>
+#else
+        #include <bios.h>
+        struct timeval { unsigned long tv_sec, tv_usec; };
+#endif
 #include "Screen.h"
 #include "mars.h"
 
@@ -45,16 +45,7 @@ void NextLine ();
 
 int MemoryEdit (char *buf, int size, int *curs, int begline, int endline);
 
-extern "C" {
-	/* int strlen (const char *); */
-	void exit (int);
-	long time (long *);
-	char *strcat (char *, const char *);
-	/* int sprintf (char *, const char *, ...); */
-	char *getenv (const char *);
-};
-
-#ifndef unix
+#if !defined(unix) && !defined(__APPLE__)
 void gettimeofday (struct timeval *tv, int flag)
 {
 	long dostime = biostime (0, 0L);
@@ -119,7 +110,7 @@ extern "C" short MyWait (short code)
 	return (! Interrupted);
 }
 
-void Interrupt ()
+void Interrupt (int sig)
 {
 	++Interrupted;
 }
@@ -143,7 +134,7 @@ void Logon ()
 	Message ("Logged on");
 }
 
-main (int argc, char **argv)
+int main (int argc, char **argv)
 {
 #ifdef SIGQUIT
 	signal (SIGQUIT, Interrupt);
@@ -196,7 +187,7 @@ main (int argc, char **argv)
 		case meta ('A'):        // справка
 			// Help ();
 			continue;
-		case cntrl ('C'):       // ^C - выход
+		case cntrl ('C'): {     // ^C - выход
 			int choice = V.Popup (" Quit ",
 				"Do you really want to quit ?", 0,
 				" Yes ", " No ", 0, PopupColor, NormalColor);
@@ -209,6 +200,7 @@ main (int argc, char **argv)
 			V.Sync ();
 			exit (0);
 			break;
+                }
 		case cntrl ('J'):       // line feed - выполнение
 		case cntrl ('M'):       // return - выполнение
 			break;
@@ -362,7 +354,7 @@ void PrintHead ()
 	V.Put (messageLine+2, 0, V.CLT, BorderColor);
 	if (TableWidth-1 < V.Columns)
 		V.Put (messageLine+2, TableWidth-1, V.CRT, BorderColor);
-	for (i=1; i<Descr->columnNumber && ColumnShift[i]-2<V.Columns; i++)
+	for (int i=1; i<Descr->columnNumber && ColumnShift[i]-2<V.Columns; i++)
 		V.Put (messageLine+2, ColumnShift[i]-2, V.CX, BorderColor);
 }
 

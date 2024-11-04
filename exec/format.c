@@ -23,6 +23,7 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include "format.h"
 
 #define MAXSTACK 8                              /* Макс. вложенность скобок */
@@ -48,8 +49,6 @@ static int FormatLevel;                         /* Текущий уровень
 static char *FirstBrace;                        /* Внешняя левая скобка */
 static int FirstBraceCount;                     /* И ее кратность */
 static int FirstFormatScale;                    /* Масштаб на первой скобке */
-
-extern long strtol (char *string, char **endptr, int base);
 
 /*
  * Задание формата для разбора.

@@ -11,7 +11,11 @@
 #CFLAGS  = -I. -DUSE_FIFO_FILES -DUSE_UNIX_DOMAIN -DNO_STDLIB -DNO_SUN_LEN
 
 # For 386bsd
-CC      = cc -pipe -O -fstrength-reduce -finline-functions
+#CC      = cc -pipe -O -fstrength-reduce -finline-functions
+#CFLAGS  = -I. -DUSE_UNIX_DOMAIN
+
+# For Mac OS
+CC      = cc -O
 CFLAGS  = -I. -DUSE_UNIX_DOMAIN
 
 SHELL   = /bin/sh

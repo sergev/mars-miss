@@ -6,11 +6,11 @@
 
 const int BUFSIZE       = 2048;         // max length of termcap entry
 
-static char *tname;                     // terminal name
+static const char *tname;               // terminal name
 static char *tbuf;                      // terminal entry buffer
 
 extern "C" {
-	int tgetent (char *bp, char *tname);
+	int tgetent (char *bp, const char *tname);
 	int tgetnum (char *name);
 	int tgetflag (char *name);
 	char *tgetstr (char *name, char **area);
@@ -42,12 +42,12 @@ void Screen::GetCap (struct Captab *t)
 
 	char *bp = new char [area - begarea];
 	memcpy (bp, begarea, area - begarea);
-	for (p=t; p->tname[0]; ++p)
+	for (struct Captab *p=t; p->tname[0]; ++p)
 		if (p->ttype == CAPSTR && *(p->ts))
 			*(p->ts) += bp - begarea;
-	delete begarea;
+	delete[] begarea;
 #ifdef DEBUG
-	for (p=t; p->tname[0]; ++p) {
+	for (struct Captab *p=t; p->tname[0]; ++p) {
 		printf ("%c%c", p->tname[0], p->tname[1]);
 		switch (p->ttype) {
 		case CAPNUM:

@@ -25,9 +25,10 @@
                        ** =  UNIX environment  = **
                        \* ====================== */
 
-#if defined(unix)
+#if defined(unix) || defined(__APPLE__)
 #include <stdio.h>
 #include <ctype.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -648,7 +649,7 @@ static inline double swapd (double v) {
 #else
 #define swaps ntohs
 #define swapl ntohl
-double swapd (double v);
+#define swapd ntohll
 #endif
 
 void SwapBytes (char* data, int length) {
@@ -674,7 +675,7 @@ static double swapd (double v) {
  */
 void InvFloat (real* data) {
   register unsigned long* ptr = (unsigned long*) data;
-  register length = sizeof (real) / sizeof (unsigned long);
+  register unsigned length = sizeof (real) / sizeof (unsigned long);
   while (length--)
     *ptr++ ^= ~ (unsigned long) 0;
 }
@@ -1065,7 +1066,7 @@ void ZInvFloat(register unshort pdata:rSI)  {
   extern void       ATloop(short*,short*);
   extern void       ATclose(void);
   extern void       CloseFiles(void);
- 
+
   extern void       MacProcess(void);
   extern void       MacTrace(char*,char*);
 

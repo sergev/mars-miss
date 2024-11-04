@@ -13,7 +13,11 @@
 #CFLAGS  = -I../client -DNO_STDLIB
 
 # For 386bsd
-CC      = cc -pipe -O -fstrength-reduce -finline-functions
+#CC      = cc -pipe -O -fstrength-reduce -finline-functions
+#CFLAGS  = -I../client
+
+# For 386bsd
+CC      = cc -O
 CFLAGS  = -I../client
 
 SHELL   = /bin/sh

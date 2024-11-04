@@ -13,7 +13,11 @@
 #CFLAGS  = -I../client -DNO_STDLIB -DNO_STRDUP
 
 # For 386bsd
-CC      = cc -pipe -O -fstrength-reduce -finline-functions
+#CC      = cc -pipe -O -fstrength-reduce -finline-functions
+#CFLAGS  = -I../client
+
+# For Mac OSX
+CC      = cc -O
 CFLAGS  = -I../client
 
 SHELL   = /bin/sh

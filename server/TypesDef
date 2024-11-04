@@ -65,6 +65,14 @@
 #  define MaxDigit    20        /* max длина строки цифр   */
 #  define MaxExponent 308       /* max десятичная экспонента */
    typedef double     real;
+#elif defined(__x86_64__)
+#  define Rbitfield 1           /* битовые поля идут справа налево */
+#  define ReverseBytes          /* обратный порядок байтов (для сортировки) */
+#  define CdShort
+#  define BSFloat               /* инвертировать отриц. real (для сортировки) */
+#  define MaxDigit    20        /* max длина строки цифр   */
+#  define MaxExponent 308       /* max десятичная экспонента */
+   typedef double     real;
 #elif defined(vax)
 #  define Rbitfield 1           /* битовые поля идут справа налево */
 #  define ReverseBytes          /* обратный порядок байтов (для сортировки) */
@@ -154,6 +162,19 @@
 # elif defined(MSDOS)
 #   define UpperCase(x) toupper(x)
 #   define fileid       short
+
+# elif defined(__APPLE__)
+#   define fileid       short
+    /*
+     * Преобразование символа в верхний регистр.
+     * Только для КОИ8.
+     */
+    static inline int UpperCase (unsigned char c) {
+      if (c>='a' && c<='z')       c += 'A' - 'a';       /* a - z */
+      else if (c>=0300 && c<0340) c += 040;             /* ю - ъ */
+      else if (c == 0243)         c = 0263;             /* ё */
+      return (c);
+    }
 
 # elif defined(unix)
 #   define fileid       short

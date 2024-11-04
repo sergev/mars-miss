@@ -10,7 +10,10 @@
 #CC      = gcc -pipe -O -fstrength-reduce -finline-functions
 
 # For 386bsd
-CC      = cc -pipe -O -fstrength-reduce -finline-functions
+#CC      = cc -pipe -O -fstrength-reduce -finline-functions
+
+# For Mac OSX
+CC      = cc -O
 
 SHELL   = /bin/sh
 CFLAGS  = -I../client

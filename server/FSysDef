@@ -112,7 +112,7 @@ static int Xopen(name,catal,new,type)
 
   extern int       SetName(char*);           /* занесение сетевого ид.*/
 
-static long Xfind(fileName, catNum, type) 
+static long Xfind(fileName, catNum, type)
       char* fileName; short catNum; long type; {
   short result;
   long  retcode;
@@ -142,7 +142,7 @@ static long Copen(fileName, catNum) unchar* fileName; short catNum; {
 # define GetMemory(x,y) {*(char**)&(y)=NewPtr(x); if(MemError()) myAbort(MemError());}
 # define GetFileLength(FD)                (GetEOF(FD,&filesize), filesize)
 
-static long _Fopen(fileName,type,new) 
+static long _Fopen(fileName,type,new)
                    char* fileName; long type; boolean new; {
   short catalog = WorkCatalog;
   char  saved;
@@ -250,10 +250,13 @@ int Xopen(char far *name, char far *catal)
                     ** = UNIX file operations = **
                     \* ======================== */
 
-#elif defined(unix)
+#elif defined(unix) || defined(__APPLE__)
 # include <sys/types.h>
 # include <sys/stat.h>
 # include <sys/errno.h>
+# include <unistd.h>
+# include <fcntl.h>
+# include <stdio.h>
 
 /*
  * Тип дескриптора файла/каталога.
@@ -286,6 +289,8 @@ int Xopen(char far *name, char far *catal)
 # define FSdelete(name,dir,typ) unix_unlink(name,dir)
 # define FSsetEOF(FD,size)      /* ftruncate(FD,size) на самом деле не нужно */
 # define GetMemory(sz,ptr)      (ptr = MyAlloc (sz))
+
+int SetName(char*);                         /* занесение сетевого ид. */
 
 /*
  * Дескриптор рабочего каталога.

@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#ifdef unix
+#if defined(unix) || defined(__APPLE__)
 #   include <unistd.h>
 #else
 #   include <io.h>
@@ -123,7 +123,11 @@ int printw (char *fmt, ...)
 {
 	if (! V)
 		fatal ();
-	V->PrintVect (color, fmt, &fmt + 1);
+
+        va_list ap;
+        va_start(ap, fmt);
+	V->PrintVect (color, fmt, ap);
+        va_end(ap);
 	return (TRUE);
 }
 

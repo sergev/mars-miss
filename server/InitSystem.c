@@ -264,7 +264,7 @@ startmode InitSystem(code, argv) int code; char **argv; {
       DialogPtr thePDialog;
       Rect      theBox;
       short     theType;
-   
+
       ControlHandle normCtrl,restCtrl,initCtrl;
       thePDialog = GetNewDialog(DparmID,NIL,(WindowPtr)-1);
       GetDItem(thePDialog,DitNormal, &theType,(Handle*)&normCtrl,&theBox);
@@ -277,7 +277,7 @@ startmode InitSystem(code, argv) int code; char **argv; {
         for(;;) {
           ModalDialog(NIL,&theItem);
         if(theItem == DitStart) break;
-          switch(theItem) {         
+          switch(theItem) {
           case DitNormal:                          /* "Normal" regime        */
             SetCtlValue(normCtrl,TRUE);
             SetCtlValue(restCtrl,FALSE);
@@ -345,8 +345,8 @@ void quit(void) {
  */
    static pascal short LimitFilter(DialogPtr,EventRecord*,short*);
    static        long  GetValue   (DialogPtr,short);
-   
-static pascal short LimitFilter(theDialog,theEvent,theItem) 
+
+static pascal short LimitFilter(theDialog,theEvent,theItem)
      DialogPtr theDialog; EventRecord* theEvent; short* theItem; {
    short  retcode = FALSE;
    unchar code;
@@ -441,7 +441,7 @@ startmode InitSystem(code, argv) int code; char **argv; {
 
   NbCacheBuf = (unsigned)CacheSize/BlockSize;
 
-  
+
   hCache  = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT,
                 (unsigned long)NbCacheBuf*BlockSize);
   if ( hCache==NULL )
@@ -470,16 +470,19 @@ startmode InitSystem(code, argv) int code; char **argv; {
 		       ** =  UNIX environment  = **
 		       \* ====================== */
 
-#elif defined(unix)
+#elif defined(unix) || defined(__APPLE__)
 #include <stdio.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 extern int errno;
 
 short WorkCatalog;                      /* WorkDir, из которой запус-ли */
 char *WorkCatName = 0;                  /* полное имя WorkDir */
-static autoConfirmFlag = 0;             /* не спрашивать подтверждение */
+static int autoConfirmFlag = 0;         /* не спрашивать подтверждение */
 static table paramFiles;                /* флаг -files */
 static short paramLocks;                /* флаг -locks */
 
@@ -670,7 +673,7 @@ startmode InitSystem (int argc, char **argv) {
   if (forkFlag) {
     int pid = fork ();
     if (pid < 0) {
-      printf ("MARS: fork: %s\n", WorkCatName, strerror (errno));
+      printf ("%s: fork: %s\n", WorkCatName, strerror (errno));
       exit (-1);
     }
     /* родитель -- возврат */
@@ -683,7 +686,7 @@ startmode InitSystem (int argc, char **argv) {
     signal (SIGTERM, quit);
     signal (SIGPIPE, SIG_IGN);
     /* отцепляемся от терминала */
-    setpgrp (0, getpid ());
+    setpgid (0, getpid ());
   }
 
   strcpy (buf, WorkCatName);

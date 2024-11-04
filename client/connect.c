@@ -18,6 +18,7 @@
 #undef AF_UNIX
 #define HOSTDFLT "localhost"
 #endif
+#include <arpa/inet.h>
 #include "mars.h"
 #include "intern.h"
 

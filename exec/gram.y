@@ -8,6 +8,8 @@ typedef struct node {
 node *tnode (int type, node *l, node *r);
 void texec (node *);
 char **tlist (node *);
+int yylex (void);
+void yyerror (char *s);
 extern void Connect (void);
 extern void Disconnect (void);
 %}
@@ -106,7 +108,7 @@ char lexbuf [1024];
 int lexbuflen;
 int yyline;
 int yylexline;
-FILE *yyfd = stdin;
+FILE *yyfd;
 char *yybuf, *yyptr;
 
 struct {

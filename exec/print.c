@@ -1,9 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "format.h"
-
-extern double strtod (char *string, char **endptr);
-extern long strtol (char *string, char **endptr, int base);
 
 static double scale (double v, int sc)
 {

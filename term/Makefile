@@ -13,8 +13,13 @@
 #CFLAGS  = -I../client -I../scr -DSPRINTF_RETURNS_INT
 
 # For 386bsd
-CC      = g++ -pipe -O -fstrength-reduce -finline-functions #-g0
+#CC      = g++ -pipe -O -fstrength-reduce -finline-functions #-g0
+#CFLAGS  = -I../client -I../scr
+
+# For Mac OSX
+CC      = g++ -O
 CFLAGS  = -I../client -I../scr
+LIBS    = -ltermcap
 
 SHELL   = /bin/sh
 OBJS    = term.o
